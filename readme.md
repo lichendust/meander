@@ -72,6 +72,8 @@ The base Meander commands, which should always be the first argument, are —
 + `merge`
 + `gender`
 
+There is also a detailed `help` command which teaches you how to use itself.
+
 ### Render
 
 	$ meander render
