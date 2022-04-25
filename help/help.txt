@@ -1,0 +1,33 @@
+$1Usage$0
+-----
+
+    meander [command] [input.fountain] [output.pdf] [--flags]
+
+Meander is designed to run as sensibly as possible with as few options as possible:
+
+    + If no command is supplied, Meander will
+      render a PDF
+    + If no input is supplied, Meander will look
+      for a $1.fountain$0 (or $1.ftn$0) file, giving
+      priority to ones named $1root$0, $1main$0 or $1manifest$0.
+    + If no output is supplied, Meander will swap
+      the extension to an appropriate one for the
+      chosen command.
+
+All this means you can simply call Meander (with no arguments) in the same location as a single-file screenplay, making generic build systems for text editors extremely easy to configure.
+
+$1Commands$0
+--------
+
+    $1render$0    render input file to PDF (default)
+    $1gender$0    display gender analysis statistics
+    $1merge$0     merge a multi-file document
+    $1convert$0   (experimental) convert Final Draft files
+    $1help$0      print this message and others
+
+$1Help$0
+----
+
+Use $1meander help [command]$0 for more information on the above commands, but also see the additional help topics available below:
+
+    $1fountain$0  fountain cheat sheet

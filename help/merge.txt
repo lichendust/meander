@@ -1,0 +1,21 @@
+$1Merge Usage$0
+-----------
+
+    meander $1merge$0 input_file [output]
+
+Merge collapses a multi-file screenplay with include directives into a single text file.
+
+If the output is unspecified, Meander will save the result with a suffix to prevent clobbering the original file.  You can forcibly overwrite the original by manually specifing it as both arguments.
+
+$1Include Directive$0
+-----------------
+
+In Highland-flavoured Fountain, an include directive allows linking to the contents of another file.  This allows writing a film with each scene in a separate file, or a manuscript by chapters.
+
+Includes take the form:
+
+    $1{{include: some/file.fountain}}$0
+
+The path to the included file should be relative to the file in which the directive is written.
+
+They can be specified anywhere in text and can be nested in multiple layers of children.  Critically, because of this nested infinity, there is no cycle-safety.  Meander will get stuck if a loop between included files is created.

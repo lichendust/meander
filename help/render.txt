@@ -1,0 +1,43 @@
+Render will take a Fountain file and convert it to a fully formatted PDF document.
+
+$1Usage$0
+-----
+
+    meander $1render$0 [input.fountain] [output.pdf] [--flags]
+
+The first option of any flag listed below is also the default, which means it does not need to be specified unless performing an override.
+
+$1Scene Numbers$0
+-------------
+
+    $1--scene -s$0
+
+    input           uses numbers from input Fountain text
+    remove          removes all scene numbers from output
+    generate        creates new, sequential scene numbers
+
+$1Format / Layout$0
+---------------
+
+    $1--format -f$0     (or title page) $1format: manuscript$0
+
+    screenplay      standard film script or screenplay
+    stageplay       stage directions and right-aligned dialogue
+    manuscript      standard wide-spaced novel manuscript
+    graphicnovel    sections added for panel directions
+
+$1Paper Size$0
+----------
+
+    $1--paper -p$0      (or title page) $1paper: A4$0
+
+    A4
+    USLetter
+
+Note that for maximum compatibility, "paper" and "format" should *not* be the first entries in the title page.  Most parsers will reject the entire title page if the first entry is unknown to them, but will quietly skip later ones.  This is never a guarantee, but it may be useful.
+
+$1Preserve Notes and/or Synopses$0
+------------------------------
+
+    $1--notes$0
+    $1--synopses$0

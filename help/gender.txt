@@ -1,0 +1,47 @@
+$1Gender Usage$0
+------------
+
+    meander $1gender$0 [input.fountain]
+
+Gender performs simple analysis of your characters' gender identities, providing a detailed print-out of how they break down across a script.
+
+The Gender command needs to be given data to ensure it can provide accurate statistics.  It expects this in the form of a boneyard comment:
+
+/*
+    [gender.male]
+    Ashby
+    Jenks
+
+    [gender.female]
+    Rosemary
+    Sissix
+    Kizzy
+
+    [gender.<custom>]
+    Dr. Chef
+
+    [gender.ignore]
+    Market Stall Owner
+*/
+
+This special boneyard must be found somewhere in the input file.  If there is more than one, the first one is used.  The first non-whitespace text inside it must be a [gender] heading.
+
+Indentation and casing of headings and characters are ignored, but the table must be arranged line-by-line.  Blank lines are skipped.
+
+There are no reserved terms for gender identities.  All terms used are technically "custom", so any number of different identities can be specified, useful for non-binary and queer characters, as well as for instances like non-humans in science fiction.
+
+The only exception to this is "ignore".  Characters assigned to "ignore" will not be counted in the statistics, useful for single-appearance characters or special cases.
+
+Any characters found in the screenplay but *not* in the gender table will be reported as "unknown" and classified in the statistics under that additional group.
+
+$1Names$0
+-----
+
+Characters can also have multiple names throughout the script, for a variety of reasons.  Meander can handle this if provided with all the variants, separated by pipes:
+
+/*
+    [gender.male]
+    Ashby | Captain Ashby
+*/
+
+The first name in the entry is used as their canonical name for all subsequent output.

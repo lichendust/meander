@@ -1,0 +1,13 @@
+build/
+media/
+html/
+test/
+
+docs/
+sublime/
+
+_*
+*.exe
+*.png
+*_test*
+*.sublime*
