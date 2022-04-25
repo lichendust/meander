@@ -1,6 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
+set build_dir=build
+
+echo [building]
+
 call :build windows amd64 ".exe" || exit /B
 
 call :build linux amd64          || exit /B
@@ -25,12 +29,12 @@ if %1 == darwin (
 	)
 )
 
-if not exist "build\%name%" md "build\%name%"
+if not exist "%build_dir%\%name%" md "%build_dir%\%name%"
 
 set GOOS=%1
 set GOARCH=%2
 
-go build -ldflags "-s -w" -trimpath -o build/%name%/meander%3
+go build -ldflags "-s -w" -trimpath -o %build_dir%\%name%\meander%3
 
 if %errorlevel% neq 0 exit 1
 exit /B 0

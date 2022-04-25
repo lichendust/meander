@@ -1,6 +1,10 @@
 #!/bin/bash
 
+build_dir="build"
+
 set -e
+
+printf "[building]\n"
 
 build() {
 	echo "$1 $2"
@@ -16,8 +20,8 @@ build() {
 		fi
 	fi
 
-	mkdir -p "build/$name"
-	env GOOS="$1" GOARCH="$2" go build -ldflags "-s -w" -trimpath -o "build/$name/meander$3"
+	mkdir -p "$build_dir/$name"
+	env GOOS="$1" GOARCH="$2" go build -ldflags "-s -w" -trimpath -o "$build_dir/$name/meander$3"
 }
 
 build windows amd64 ".exe"
