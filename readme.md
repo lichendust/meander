@@ -82,19 +82,13 @@ The default, implied option.  Creates a PDF of your input file.
 
 	$ meander merge
 
-Meander supports a multi-file workflow using a special include syntax.  Merging collapses your multi-file screenplay into a single text file.  Rendering does this automatically, but that doesn't mean you don't need to do it in plain text too.
+Meander supports a multi-file workflow using a special `{{include}}` syntax.  Merging collapses your multi-file screenplay into a single text file.  Rendering does this automatically, but that doesn't mean you don't need to do it in plain text too.
 
 Using the directive —
 
 	{{include: scenes/some_file.fountain}}
 
 — somewhere in your Fountain file will cause it to import the contents of the path at that location.  The include paths used are *relative to the file they're written in*, not where Meander is being run from.
-
-In the screenplay text, using —
-
-	{{include: scenes/some_file.fountain}}
-
-— will import the targeted file.
 
 ⚠ Includes in Meander are infinitely recursive, meaning you can turtle all the way down with child files as many levels as makes you happy, but **they're not cycle-safe**.  You will get a stack overflow or an infinite loop where your computer runs out of memory if you circularly include files.
 
@@ -261,7 +255,7 @@ Meander also includes —
 
 ### Directives
 
-
+You've already seen the `{{include}}` directive above in the [Merge](#merge) command, but Meander includes a few other directives.
 
 #### Timestamps
 
