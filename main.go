@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-const title = "Meander 1.0rc"
+const title = "Meander 0.1.0RC"
 
 const (
 	// always all lowercase

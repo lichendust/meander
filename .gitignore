@@ -9,5 +9,6 @@ sublime/
 _*
 *.exe
 *.png
+*.jpg
 *_test*
 *.sublime*

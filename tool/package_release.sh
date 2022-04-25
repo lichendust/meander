@@ -2,8 +2,17 @@
 
 set -e
 
+if [ -z $1 ]; then
+	echo "please specify a version"
+	exit 1;
+fi
+
+rm build/*.zip
+
 for f in build/*; do
 	name=$(basename $f)
+
+	name=${name/"_"/"_$1_"}
 
 	mkdir -p $f/license/
 
