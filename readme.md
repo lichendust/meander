@@ -6,11 +6,11 @@ In addition to the core Fountain specification, Meander also extends the syntax 
 
 Meander has a focus on beautiful formatting on the page, as well as being available and fully functional on as large a number of platforms as possible — most of the highly-regarded industry standard tools are prohibitively expensive simply by virtue of only being available on Apple devices.
 
-Instead, Meander lets you write wherever you like, on whatever platform you like, with any plain-text editor you like.  Or, like some of us, on a bunch of them at once.
+Instead, Meander lets you write wherever you like, on whatever platform you like, with any plain-text editor you like.  Or, like some of us, on a bunch of them at once.  You can install it anywhere, run it anywhere and take it anywhere, by design.  It's licensed under the GPL 3.0, to ensure it remains available and modifiable.
 
-You can install it anywhere, run it anywhere and take it anywhere, by design.  It's licensed under the GPLv3, to ensure it remains available and modifiable.
+The binaries are available from [itch.io](https://qxoko.itch.io/meander) under a "Pay What You Want" model — which includes free!
 
-It is free to use, source-available for personal modifications and available from [itch.io](https://qxoko.itch.io/meander) under a "Pay What You Want" model.
+In spite of this quite scary table of contents, Meander is *extremely* simple to use.  There's just a lot of cool things to cover!
 
 ## Table of Contents
 
