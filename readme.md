@@ -39,6 +39,7 @@ It is free to use, source-available for personal modifications and available fro
 - [Attribution](#attribution)
 - [Planned Features](#planned-features)
 	- [Starred Revisions](#starred-revisions)
+	- [Language Support](#language-support)
 	- [Full Template Overriding](#full-template-overriding)
 	- [Additional Paper Sizes](#additional-paper-sizes)
 
@@ -304,11 +305,17 @@ go build -ldflags "-s -w"      # strips garbage from the binary
 
 You're done.  There should be a shiny executable in the build directory, all ready to run.
 
+Great care has been taken to minimise the use of libraries in Meander for future-proofedness and maintainability.  We currently only rely on —
+
++ `gopdf` — [source](https://github.com/signintech/gopdf)
++ `isatty` — [source](https://github.com/mattn/go-isatty)
++ `levenshtein` — [source](https://github.com/agnivade/levenshtein)
+
 ## Attribution
 
 The `{{include}}` syntax feature was originally from the tiny Python utility [Mountain](https://github.com/mjrusso/mountain), where it used the note syntax `[[include]]`.
 
-[Highland 2](https://highland2.app) would then borrow this idea, using curly braces instead.  Meander has adopted the latter for compatibility, but it still felt important to thank Mountain where they did not.
+Highland would then borrow this idea, using curly braces instead.  Meander has adopted the latter for compatibility, but it still felt important to thank Mountain where they did not.
 
 ## Planned Features
 
@@ -319,6 +326,12 @@ Using version control diffs and tags, Meander can provide starred revision featu
 Using tags as the historical anchor allows any number of Git/Mercurial revisions between the writer-defined screenplay revisions.
 
 This feature is partially implemented in that all of the necessary components exist within the source, but the feature is temporarily disabled due to frequent bugs that are difficult to test.
+
+### Language Support
+
+Adding support for multiple languages is a priority for Meander.  No work is necessary to extend Meander's Fountain parser to support internationalised terms in language-driven matches (such as `INT.` in scene headings).
+
+Automatic tags like `(MORE)` and `(CONT'D)` are slightly more complex, with automatic substitution and recognition being used to ensure Meander doesn't double up on any that have been manually placed, but a working solution is certainly possible with a little effort.  (Unlike the parser, this is currently hard-coded.)
 
 ### Full Template Overriding
 
