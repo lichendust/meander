@@ -40,7 +40,7 @@ func set_color(document *gopdf.GoPdf, color print_color) {
 
 // applies styles using the library's dumb API
 func set_font(document *gopdf.GoPdf, style string) {
-	err := document.SetFont("f", style, font_size)
+	err := document.SetFont(reserved_name, style, font_size)
 
 	if err != nil {
 		panic(err)
