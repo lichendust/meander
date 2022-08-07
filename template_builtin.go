@@ -40,7 +40,7 @@ var template_store = map[string]*template {
 			ACTION: {},
 			SCENE: {
 				casing:      UPPERCASE,
-				style:       BOLD,
+				style:       UNDERLINE,
 				space_above: pica,
 				width:       inch * 5,
 			},

@@ -3,7 +3,6 @@ module meander
 go 1.17
 
 require (
-	github.com/agnivade/levenshtein v1.1.1
 	github.com/mattn/go-isatty v0.0.14
 	github.com/signintech/gopdf v0.10.6
 )

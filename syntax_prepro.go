@@ -68,9 +68,23 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 	buffer.Grow(len(text))
 
 	last_element_removable := false
+	is_escaped := false
 
 	for len(text) > 0 {
 		// strip boneyards
+		if text[0] == '\\' {
+			if is_escaped {
+				buffer.WriteRune('\\')
+				text = text[1:]
+				is_escaped = false
+				continue
+			}
+
+			text = text[1:]
+			is_escaped = true
+			continue
+		}
+
 		if text[0] == '/' && len(text) > 1 && text[1] == '*' {
 			n := rune_pair(text[2:], '*', '/')
 
@@ -129,6 +143,13 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 		// strip notes
 		if !config.include_notes {
 			if text[0] == '[' && len(text) > 1 && text[1] == '[' {
+				if is_escaped {
+					buffer.WriteString("[[")
+					text = text[2:]
+					is_escaped = false
+					continue
+				}
+
 				n := rune_pair(text[2:], ']', ']')
 
 				if n < 0 {
@@ -186,6 +207,13 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 
 		// handle directives
 		if text[0] == '{' && len(text) > 1 && text[1] == '{' {
+			if is_escaped {
+				buffer.WriteString("{{")
+				text = text[2:]
+				is_escaped = false
+				continue
+			}
+
 			n := rune_pair(text[2:], '}', '}')
 
 			if n < 0 {
@@ -304,6 +332,11 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 				text = text[n+2:]
 				continue
 			}
+		}
+
+		if is_escaped {
+			buffer.WriteRune('\\')
+			is_escaped = false
 		}
 
 		last_element_removable = false

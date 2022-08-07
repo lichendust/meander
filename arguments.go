@@ -144,14 +144,14 @@ func get_arguments() (*config, bool) {
 		case "":
 			break
 
-		/*case "revision", "r":
+		case "revision", "r":
 			conf.revision = true
 
 			if b != "" {
 				conf.revision_tag = b
 				counter ++
 			}
-			continue*/
+			continue
 
 		case "version":
 			conf.command = COMMAND_VERSION

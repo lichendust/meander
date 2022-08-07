@@ -67,6 +67,8 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 	title := make(map[string]string, 16)
 	nodes := make([]*syntax_node, 0, token_count)
 
+	first := true
+
 	// title page mini-parser
 	for {
 		n := strings.IndexRune(text, ':')
@@ -75,19 +77,21 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 		if n < 0 {
 			break
 		}
-		// it's very unlikely this is valid
-		if n > 13 {
-			break
-		}
 
 		// get the leading word before the ":"
 		word := strings.ToLower(text[:n])
 
 		// consume the word and colon
-		text = text[len(word) + 1:]
+		text = text[n + 1:]
 
-		if config.revision {
+		if config.revision && first {
+			// because of the need to always skip the diff char
+			// to check if we're at the end of the title page
+			// below, we end up returning to this point for
+			// each title entry with the diff char already
+			// removed - we only need to do it the first time
 			word = word[1:]
+			first = false
 		}
 
 		word = strings.TrimSpace(word)
@@ -109,25 +113,22 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 
 			sub_line_buffer.WriteString(strings.TrimSpace(line))
 
-			// the first character is now the
-			// newline (or eof)
-			// because "extract_to_newline"
-			// stops before the first one it finds
+			// the first character is now the newline (or eof)
+			// because "extract_to_newline" stops before the
+			// first one it finds
 
-			if len(text) < 1 {
+			if len(text) == 0 {
 				break
 			}
 
-			// safety for eof
 			if text[0] == '\n' {
 				text = text[1:] // consume the newline
 
-				// eof with a trailing newline, which some
-				// text editors love to do
 				if len(text) == 0 {
 					break
 				}
 
+				// eat the diff char
 				if config.revision {
 					text = text[1:]
 				}
@@ -135,7 +136,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 				// this means we've hit a double newline;
 				// title pages in Fountain must be all
 				// smushed together
-				if text[0] == '\n' {
+				if len(text) > 0 && text[0] == '\n' {
 					break_main_loop = true
 					break
 				}
@@ -155,6 +156,10 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 				sub_line := extract_to_newline(text)
 				text = text[len(sub_line):]
 
+				/*if config.revision {
+					sub_line = sub_line[1:]
+				}*/
+
 				// write it into the sub_line buffer,
 				// _removing_ that leading whitespace,
 				// because we don't want it
@@ -163,20 +168,15 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 			}
 		}
 
-		// get the final version of the
-		// sub_line and make sure it has no
-		// leading newline (side effect of
-		// the WriteRune directly above)
-		// it's cheaper to remove here than
-		// to make a logical exception
-		// within the loop
+		// get the final version of the sub_line and make sure
+		// it has no leading newline (side effect of the
+		// WriteRune directly above) it's cheaper to remove
+		// here than to make a logical exception within the loop
 		sub_line := consume_whitespace(sub_line_buffer.String())
 
-		// if the entire sub_line is empty,
-		// the user didn't fill in the value
-		// so don't register it
-		// we're nice about it though, we
-		// don't write it back into their
+		// if the entire sub_line is empty, the user didn't fill
+		// in the value so don't register it we're nice about
+		// it though, we don't write it back into their
 		// screenplay as an action
 		if sub_line != "" {
 			title[word] = sub_line
@@ -573,7 +573,16 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 		}
 	}
 
-	// post-parse clean ups and checks
+	syntax_validator(nodes)
+
+	return &fountain_content {
+		title: title,
+		nodes: nodes,
+	}, true
+}
+
+// post-parse clean ups and checks
+func syntax_validator(nodes []*syntax_node) {
 	if len(nodes) > 0 {
 		// remove leading whitespace on file
 		if nodes[0].node_type == WHITESPACE {
@@ -586,41 +595,38 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 				nodes = nodes[:len(nodes)-1]
 
 			// trailing character can't be a character
-			/*case CHARACTER:
-				last_node.node_type = ACTION*/
+			case CHARACTER:
+				last_node.node_type = ACTION
 			}
 		}
 
 		// reset any false positives for characters
 		for i, node := range nodes {
-			if node.node_type == CHARACTER {
-				if len(nodes[i:]) > 1 {
-					x := nodes[i + 1]
+			if node.node_type != CHARACTER {
+				continue
+			}
 
-					// if two characters are back to back
-					// reset the first one
-					if x.node_type == CHARACTER {
-						x.node_type = DIALOGUE
-						continue
-					}
+			if len(nodes[i:]) > 1 {
+				forward_node := nodes[i + 1]
 
-					// if the lines following it are anything
-					// other than valid character/dialogue content
-					// reset it.
-					if !is_character_train(x.node_type) {
-						node.node_type = ACTION
-					}
-				} else {
-					// if it's the last thing in the file
-					// reset it.
+				// if two characters are back to back
+				// reset the first one
+				if forward_node.node_type == CHARACTER {
+					forward_node.node_type = DIALOGUE
+					continue
+				}
+
+				// if the lines following it are anything
+				// other than valid character/dialogue content
+				// reset it.
+				if !is_character_train(forward_node.node_type) {
 					node.node_type = ACTION
 				}
+			} else {
+				// if it's the last thing in the file
+				// reset it.
+				node.node_type = ACTION
 			}
 		}
 	}
-
-	return &fountain_content {
-		title: title,
-		nodes: nodes,
-	}, true
 }

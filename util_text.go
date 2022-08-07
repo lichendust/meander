@@ -131,11 +131,16 @@ func is_valid_scene(line string) bool {
 			word = line[:i]
 			break
 		}
-		if ascii_space[c] == 1 {
-			word = line[:i]
-			break
+
+		if c >= utf8.RuneSelf {
+			if unicode.IsSpace(c) {
+				word = line[:i]
+				break
+			}
+			continue
 		}
-		if c >= utf8.RuneSelf && unicode.IsSpace(c) {
+
+		if ascii_space[c] == 1 {
 			word = line[:i]
 			break
 		}

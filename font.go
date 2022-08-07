@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"bytes"
 	"strings"
+	"unicode/utf8"
 	"path/filepath"
 
 	"github.com/signintech/gopdf"
-	"github.com/agnivade/levenshtein"
 
 	_ "embed"
 )
@@ -171,7 +171,7 @@ func find_font(name string) map[string]string {
 			direct = direct[:len(name)]
 		}
 
-		if levenshtein.ComputeDistance(direct, name) < 3 {
+		if levenshtein_distance(direct, name) < 3 {
 			// if we're satisfied that we got a match...
 
 			// register this match in the "all matches" list
@@ -220,9 +220,9 @@ func find_font(name string) map[string]string {
 		you can test this by fmt-printing the arrays above
 
 		unfortunately, it's garbage-in garbage-out, so if
-		levenshtein gave us bogus matches (or the requested
-		font isn't even installed) then this really badly
-		compounds the problem
+		levenshtein gave us bogus matches (which usually
+		means the requested font isn't even installed) then
+		this really badly compounds the problem
 
 		these assign empty strings if the input array is empty
 	*/
@@ -315,4 +315,82 @@ func give_shortest(input []string, keyword string) string {
 	}
 
 	return input[x]
+}
+
+// levenshtein implementation taken from
+// https://github.com/agnivade/levenshtein [MIT]
+const alloc_threshold = 32
+
+// Works on runes (Unicode code points) but does not normalize
+// the input strings. See https://blog.golang.org/normalization
+// and the golang.org/x/text/unicode/norm package.
+func levenshtein_distance(a, b string) int {
+	if len(a) == 0 {
+		return utf8.RuneCountInString(b)
+	}
+	if len(b) == 0 {
+		return utf8.RuneCountInString(a)
+	}
+	if a == b {
+		return 0
+	}
+
+	// We need to convert to []rune if the strings are non-ASCII.
+	// This could be avoided by using utf8.RuneCountInString
+	// and then doing some juggling with rune indices,
+	// but leads to far more bounds checks. It is a reasonable trade-off.
+	string_one := []rune(a)
+	string_two := []rune(b)
+
+	// swap to save some memory O(min(a,b)) instead of O(a)
+	if len(string_one) > len(string_two) {
+		string_one, string_two = string_two, string_one
+	}
+
+	len_one := len(string_one)
+	len_two := len(string_two)
+
+	// Init the row.
+	var x []uint16
+	if len_one + 1 > alloc_threshold {
+		x = make([]uint16, len_one + 1)
+	} else {
+		// We make a small optimization here for small strings.
+		// Because a slice of constant length is effectively an array,
+		// it does not allocate. So we can re-slice it to the right length
+		// as long as it is below a desired threshold.
+		x = make([]uint16, alloc_threshold)
+		x = x[:len_one + 1]
+	}
+
+	// we start from 1 because index 0 is already 0.
+	for i := 1; i < len(x); i++ {
+		x[i] = uint16(i)
+	}
+
+	// make a dummy bounds check to prevent the 2 bounds check down below.
+	// The one inside the loop is particularly costly.
+	_ = x[len_one]
+
+	// fill in the rest
+	for i := 1; i <= len_two; i++ {
+		prev := uint16(i)
+		for j := 1; j <= len_one; j++ {
+			current := x[j - 1] // match
+			if string_two[i - 1] != string_one[j - 1] {
+				current = min(min(x[j - 1] + 1, prev + 1), x[j] + 1)
+			}
+			x[j - 1] = prev
+			prev = current
+		}
+		x[len_one] = prev
+	}
+	return int(x[len_one])
+}
+
+func min(a, b uint16) uint16 {
+	if a < b {
+		return a
+	}
+	return b
 }

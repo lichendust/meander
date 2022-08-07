@@ -93,6 +93,10 @@ func find_default_file() string {
 
 		ext := filepath.Ext(path)
 
+		if ext == "" {
+			return nil
+		}
+
 		if ext[1] != 'f' && ext != ".ftn" && ext != ".fountain" {
 			return nil
 		}
