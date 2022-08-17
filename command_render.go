@@ -584,7 +584,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			starting_pos_y := pos_y
 
 			// which is tallest
-			highest := left_height
+			highest := left_height + pica // this is a magic pica
 			if right_height > highest {
 				highest = right_height
 			}
@@ -598,7 +598,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			}
 
 			{
-				draw_character_block(document, right, margin_left, pos_y, template.line_height)
+				draw_character_block(document, left, margin_left, pos_y, template.line_height)
 				pos_y = starting_pos_y
 
 				draw_character_block(document, right, margin_left + inch * 3, pos_y, template.line_height)
