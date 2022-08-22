@@ -19,13 +19,9 @@ var paper_store = map[string]*paper {
 const (
 	dual_width = inch * 2.5
 
-	dual_char_margin = inch
+	dual_char_margin = inch / 2
 	dual_para_margin = inch / 2
 )
-
-func init() {
-	template_store["document"].look_up = template_store["graphicnovel"].look_up
-}
 
 var template_store = map[string]*template {
 	"screenplay": {
@@ -140,6 +136,7 @@ var template_store = map[string]*template {
 			ACTION: {},
 			SCENE: {
 				casing:      UPPERCASE,
+				style:       UNDERLINE, 
 				space_above: pica,
 				width:       inch * 5,
 			},
@@ -179,11 +176,9 @@ var template_store = map[string]*template {
 			SECTION2: {
 				casing: UPPERCASE,
 				style:  BOLD,
-				space_above: pica,
 			},
 			SECTION3: {
 				style: BOLD,
-				space_above: pica,
 			},
 		},
 	},
@@ -251,9 +246,58 @@ var template_store = map[string]*template {
 		},
 	},
 	"document": {
-		line_height_title:   line_height_title,
-		line_height:         line_height,
-		title_page_align:    LEFT,
-		allow_dual_dialogue: false,
+		line_height_title: line_height_title,
+		line_height:       line_height,
+
+		allow_dual_dialogue: true,
+
+		look_up: map[uint8]*template_entry {
+			ACTION: {},
+			SCENE: {
+				casing:      UPPERCASE,
+				space_above: pica,
+				width:       inch * 5,
+			},
+			CHARACTER: {
+				margin: inch * 2,
+			},
+			PARENTHETICAL: {
+				margin: inch * 1.4,
+				width:  inch * 2,
+			},
+			DIALOGUE: {
+				margin: inch * 1,
+				width:  inch * 3,
+			},
+			LYRIC: {
+				margin: inch * 1,
+				width:  inch * 3,
+				style:  ITALIC,
+			},
+			TRANSITION: {
+				casing:  UPPERCASE,
+				justify: RIGHT,
+			},
+			CENTERED: {
+				justify: CENTER,
+				width:   inch * 5,
+			},
+			SYNOPSIS: {
+				skip:  true,
+				style: ITALIC,
+			},
+			SECTION: {
+				style: BOLD | UNDERLINE,
+				space_above: pica,
+			},
+			SECTION2: {
+				style: UNDERLINE,
+				space_above: pica,
+			},
+			SECTION3: {
+				style: ITALIC | UNDERLINE,
+				space_above: pica,
+			},
+		},
 	},
 }

@@ -2,6 +2,10 @@ package main
 
 import "github.com/signintech/gopdf"
 
+// @todo this needs to be looked at because it's preventing
+// internationalisation from going ahead safely i'd like a
+// nice way to do this without needing weird config switches
+// in each individual screenplay
 const (
 	more_tag   = "(more)"
 	cont_tag   = "(CONT'D)"
