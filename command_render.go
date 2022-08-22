@@ -214,7 +214,7 @@ func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_
 	case CENTER:
 		main_align_pos = paper.width / 2
 	case LEFT:
-		main_align_pos = margin_left
+		main_align_pos = inch
 	case RIGHT:
 		main_align_pos = margin_right
 	}
@@ -696,6 +696,19 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 			// if not set to remove, print the scene numbers
 			if config.scenes != SCENE_REMOVE {
+				font_setter := ""
+
+				plate := template.look_up[SCENE]
+
+				if plate.style & BOLD != 0 {
+					font_setter += "B"
+				}
+				if plate.style & ITALIC != 0 {
+					font_setter += "I"
+				}
+
+				set_font(document, font_setter)
+
 				document.SetX(margin_left / 2)
 				document.Text(scene_number)
 
