@@ -57,7 +57,7 @@ func (f *inline_format) String() string {
 	could_close  := " "
 	is_confirmed := " "
 
-	if f.format_type > NORMAL {
+	if f.leaf_type > NORMAL {
 		is_confirmed = "C"
 	}
 
@@ -69,14 +69,14 @@ func (f *inline_format) String() string {
 		could_open = "O"
 	}
 
-	if f.is_confirmed {
+	if f.is_opening {
 		is_confirmed = "O"
 	}
 
 	return fmt.Sprintf(
 		"%d %-12s %s %s %s %q",
 		f.space_width,
-		leaf_type_convert[f.format_type],
+		leaf_type_convert[f.leaf_type],
 		could_open,
 		could_close,
 		is_confirmed,
@@ -128,7 +128,7 @@ func (line *syntax_line) String() string {
 	for _, entry := range list {
 		fmt.Printf(strings.Repeat(" ", entry.space_width))
 
-		if entry.format_type == NORMAL {
+		if entry.leaf_type == NORMAL {
 			fmt.Printf(entry.text)
 		}
 	}
