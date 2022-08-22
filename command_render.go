@@ -889,17 +889,17 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 	// draw all the leaves
 	for _, leaf := range line.leaves {
 		if leaf.leaf_type == BOLD {
-			data.is_bold   = leaf.opening
+			data.is_bold   = leaf.is_opening
 		}
 		if leaf.leaf_type == ITALIC {
-			data.is_italic = leaf.opening
+			data.is_italic = leaf.is_opening
 		}
 		if leaf.leaf_type == BOLDITALIC {
-			data.is_bold   = leaf.opening
-			data.is_italic = leaf.opening
+			data.is_bold   = leaf.is_opening
+			data.is_italic = leaf.is_opening
 		}
 		if leaf.leaf_type == NOTE {
-			if leaf.opening {
+			if leaf.is_opening {
 				data.active_color = print_color {100, 100, 100} // @color hardcoded
 			} else {
 				data.active_color = data.base_color
