@@ -68,9 +68,21 @@ var template_store = map[string]*template {
 				skip:  true,
 				style: ITALIC,
 			},
-			SECTION:  {skip: true},
-			SECTION2: {skip: true},
-			SECTION3: {skip: true},
+			SECTION: {
+				skip: true,
+				casing:      UPPERCASE,
+				style:       BOLD | UNDERLINE,
+				space_above: pica,
+			},
+			SECTION2: {
+				skip: true,
+				casing: UPPERCASE,
+				style:  BOLD,
+			},
+			SECTION3: {
+				skip: true,
+				style: BOLD,
+			},
 		},
 	},
 	"stageplay": {
@@ -119,9 +131,21 @@ var template_store = map[string]*template {
 				skip:  true,
 				style: ITALIC,
 			},
-			SECTION:  {skip: true},
-			SECTION2: {skip: true},
-			SECTION3: {skip: true},
+			SECTION: {
+				skip: true,
+				casing:      UPPERCASE,
+				style:       BOLD | UNDERLINE,
+				space_above: pica,
+			},
+			SECTION2: {
+				skip: true,
+				casing: UPPERCASE,
+				style:  BOLD,
+			},
+			SECTION3: {
+				skip: true,
+				style: BOLD,
+			},
 		},
 	},
 	"graphicnovel": {
@@ -184,16 +208,15 @@ var template_store = map[string]*template {
 	},
 	"manuscript": {
 		line_height_title: line_height_title,
-		line_height:       line_height,
+		line_height:       pica * 1.5,
 
-		title_page_align: LEFT,
+		title_page_align: CENTER,
 
 		allow_dual_dialogue: false,
 
 		look_up: map[uint8]*template_entry {
 			ACTION: {
 				para_indent: 4,
-				line_height: pica * 2,
 			},
 			SCENE: {
 				casing:      UPPERCASE,

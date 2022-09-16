@@ -35,14 +35,13 @@ type config struct {
 
 	include_notes    bool
 	include_synopses bool
+	include_sections bool
+	write_gender     bool
 
 	revision     bool
 	revision_tag string
 
-	write_gender bool
-
 	font_name   string
-
 	source_file string
 	output_file string
 }
@@ -170,6 +169,10 @@ func get_arguments() (*config, bool) {
 
 		case "synopses":
 			conf.include_synopses = true
+			continue
+
+		case "sections":
+			conf.include_sections = true
 			continue
 
 		case "update-table":

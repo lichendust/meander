@@ -314,6 +314,11 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 	if config.include_synopses {
 		template.look_up[SYNOPSIS].skip = false
 	}
+	if config.include_sections {
+		template.look_up[SECTION].skip  = false
+		template.look_up[SECTION2].skip = false
+		template.look_up[SECTION3].skip = false
+	}
 
 	safe_height := paper.height - margin_bottom
 
