@@ -735,7 +735,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			// immediate page overflow before writing
 			// based on wrapped block height, if necessary
 			if len(lines) >= 2 {
-				if pos_y + line_height > safe_height {
+				if pos_y + line_height * 2 > safe_height {
 					new_page(document, current_header, current_footer)
 				}
 			}
@@ -780,7 +780,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 		}
 
 		// regular page overflow at the end of writing
-		if pos_y > safe_height || node.node_type == PAGE_BREAK {
+		if pos_y + pica > safe_height || node.node_type == PAGE_BREAK {
 			new_page(document, current_header, current_footer)
 
 			if node.node_type == PAGE_BREAK {

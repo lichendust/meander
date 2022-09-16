@@ -447,6 +447,10 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 						}
 					}
 
+					if config.revision {
+						line = line[1:]
+					}
+
 					if template, ok := macro(line, "header"); ok {
 						nodes = append(nodes, &syntax_node {
 							node_type: HEADER,
