@@ -31,6 +31,9 @@ func main() {
 	case COMMAND_MERGE:
 		command_merge_document(config)
 
+	case COMMAND_JSON:
+		command_json(config)
+
 	case COMMAND_GENDER:
 		command_gender_analysis(config)
 

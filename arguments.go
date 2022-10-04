@@ -12,6 +12,7 @@ const (
 	COMMAND_RENDER uint8 = iota
 	COMMAND_MERGE
 	COMMAND_GENDER
+	COMMAND_JSON
 	COMMAND_CONVERT
 	COMMAND_HELP
 	COMMAND_VERSION
@@ -112,6 +113,11 @@ func get_arguments() (*config, bool) {
 
 			case "merge":
 				conf.command = COMMAND_MERGE
+				args = args[1:]
+				continue
+
+			case "json":
+				conf.command = COMMAND_JSON
 				args = args[1:]
 				continue
 

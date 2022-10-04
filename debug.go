@@ -142,30 +142,6 @@ func (line *syntax_line) String() string {
 	fmt.Println()
 }*/
 
-var node_type_convert = map[uint8]string{
-	WHITESPACE: "whitespace",
-	PAGE_BREAK: "page_break",
-	HEADER: "header",
-	FOOTER: "footer",
-	SCENE_NUMBER: "scene_number",
-
-	ACTION: "action",
-	LIST: "list",
-	SCENE: "scene",
-	CHARACTER: "character",
-	PARENTHETICAL: "parenthetical",
-	DIALOGUE: "dialogue",
-	LYRIC: "lyric",
-	TRANSITION: "transition",
-	CENTERED: "centered",
-
-	SECTION:  "section 1",
-	SECTION2: "section 2",
-	SECTION3: "section 3",
-
-	SYNOPSIS: "synopsis",
-}
-
 func debug_title_page(title map[string]string) {
 	for _, c := range debug_title_order {
 		if x, ok := title[c]; ok {
