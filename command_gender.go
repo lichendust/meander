@@ -12,119 +12,51 @@ import (
 	"io/ioutil"
 )
 
-type gender_comment struct {
+type Gender_Data struct {
 	longest_gender int
 	longest_char   int
-	gender_list []*gender_group
+	gender_list []*Gender_Group
 }
 
-type gender_group struct {
+type Gender_Group struct {
 	gender_name  string
 	longest_char int
-	characters   []*gender_char
+	characters   []*Gender_Char
 }
 
-type gender_char struct {
-	main_name   string
-	all_names   []string
-	gender_name string
-	line_count  int
+type Gender_Char struct {
+	Name       string   `json:"name"`
+	AllNames   []string `json:"other_names,omitempty"`
+	Gender     string   `json:"gender"`
+	LineCount  int      `json:"lines_spoken,omitempty"`
 }
 
 func command_gender_analysis(config *config) {
-	config.include_notes    = false
-	config.include_synopses = false
-
-	// read comment from input file
-	the_comment, ok := gender_table_parser(config)
+	content, data, has_updated, ok := do_full_analysis(config)
 
 	if !ok {
 		return
 	}
 
-	// swizzle the character table so the main_name
-	// is the lookup for the character's data,
-	// sharing memory addresses with the original tree
-	lookup_table := char_swizzle(the_comment)
-
-	// parse the full screenplay
-	content, ok := syntax_parser(config)
-
-	if !ok {
-		return
-	}
-
-	unknown_group_size := 0
-
-	{
-		// if the unknown group exists, store a pointer
-		// to it for updating new members from the text
-		var unknown_group *gender_group
-
-		for _, group := range the_comment.gender_list {
-			if group.gender_name == "unknown" {
-				unknown_group = group
-				break
-			}
-		}
-
-		// if there isn't an unknown group
-		// already, create a new one
-		if unknown_group == nil {
-			unknown_group = &gender_group {
-				characters:  make([]*gender_char, 0, 32),
-				gender_name: "unknown",
-			}
-			the_comment.gender_list = append(the_comment.gender_list, unknown_group)
-		}
-
-		unknown_group_size = len(unknown_group.characters)
-
-		// seek through nodes
-		has_any_character := false
-
-		for _, node := range content.nodes {
-			if node.node_type == CHARACTER {
-				has_any_character = true
-
-				for i, c := range node.raw_text {
-					if c == '(' {
-						node.raw_text = strings.TrimSpace(node.raw_text[:i])
-						break
-					}
-				}
-
-				lower := strings.ToLower(node.raw_text)
-
-				if _, ok := lookup_table[lower]; ok {
-					lookup_table[lower].line_count ++
-				} else {
-					unknown_char := &gender_char {
-						main_name:   lower,
-						all_names:   []string{lower},
-						gender_name: "unknown",
-						line_count:  1,
-					}
-
-					lookup_table[lower] = unknown_char
-					unknown_group.characters = append(unknown_group.characters, unknown_char)
-				}
-			}
-		}
-
-		if !has_any_character {
-			fmt.Fprintln(os.Stderr, "gender: no character data to display!")
+	// update the table in the source file
+	if has_updated && config.write_gender {
+		if ok := gender_replace_comment(config, data); !ok {
+			fmt.Fprintf(os.Stderr, "failed to replace gender table!")
 			return
 		}
-
-		// decide to rewrite the comment with the new data
-		if config.write_gender && len(unknown_group.characters) != unknown_group_size {
-			if ok := gender_replace_comment(config, the_comment); !ok {
-				fmt.Fprintf(os.Stderr, "failed to replace gender table!")
-				return
-			}
-		}
 	}
+
+	/*
+		@efficiency @todo we parse the files three(?) times from
+		disk in order to print gender analysis onto the PDF
+		itself. The preprocessor has always been nested inside
+		the target functions, including gender, but when I
+		decided to print onto the PDF, all that exploded.  We
+		should fix that.
+
+		I've left this here even though it's not technically
+		occurring in this function, it's a systemic issue.
+	*/
 
 	if running_in_term {
 		fmt.Println()
@@ -157,18 +89,111 @@ func command_gender_analysis(config *config) {
 		fmt.Println()
 	}
 
-	print_data(crunch_chars_by_gender(the_comment), "Character Count by Gender")
+	print_data(crunch_chars_by_gender(data), "Character Count by Gender")
 	fmt.Println()
-	print_data(crunch_lines_by_gender(the_comment), "Lines by Gender")
+	print_data(crunch_lines_by_gender(data), "Lines by Gender")
 	fmt.Println()
-	print_data(crunch_chars_by_lines(the_comment), "Characters by Lines Spoken")
+	print_data(crunch_chars_by_lines(data), "Characters by Lines Spoken")
 
 	if running_in_term {
 		fmt.Println()
 	}
 }
 
-func gender_table_parser(config *config) (*gender_comment, bool) {
+func do_full_analysis(config *config) (*fountain_content, *Gender_Data, bool, bool) {
+	config.include_notes    = false
+	config.include_synopses = false
+
+	// read comment from input file
+	the_comment, ok := gender_table_parser(config)
+
+	if !ok {
+		return nil, nil, false, false
+	}
+
+	// swizzle the character table so the Name
+	// is the lookup for the character's data,
+	// sharing memory addresses with the original tree
+	lookup_table := char_swizzle(the_comment)
+
+	// parse the full screenplay
+	content, ok := syntax_parser(config)
+
+	if !ok {
+		return nil, nil, false, false
+	}
+
+	has_changes := false
+	unknown_group_size := 0
+
+	{
+		// if the unknown group exists, store a pointer
+		// to it for updating new members from the text
+		var unknown_group *Gender_Group
+
+		for _, group := range the_comment.gender_list {
+			if group.gender_name == "unknown" {
+				unknown_group = group
+				break
+			}
+		}
+
+		// if there isn't an unknown group
+		// already, create a new one
+		if unknown_group == nil {
+			unknown_group = &Gender_Group {
+				characters:  make([]*Gender_Char, 0, 32),
+				gender_name: "unknown",
+			}
+			the_comment.gender_list = append(the_comment.gender_list, unknown_group)
+		}
+
+		unknown_group_size = len(unknown_group.characters)
+
+		// seek through nodes
+		has_any_character := false
+
+		for _, node := range content.nodes {
+			if node.node_type == CHARACTER {
+				has_any_character = true
+
+				for i, c := range node.raw_text {
+					if c == '(' {
+						node.raw_text = strings.TrimSpace(node.raw_text[:i])
+						break
+					}
+				}
+
+				lower := strings.ToLower(node.raw_text)
+
+				if _, ok := lookup_table[lower]; ok {
+					lookup_table[lower].LineCount ++
+				} else {
+					unknown_char := &Gender_Char {
+						Name:   lower,
+						AllNames:   []string{lower},
+						Gender: "unknown",
+						LineCount:  1,
+					}
+
+					lookup_table[lower] = unknown_char
+					unknown_group.characters = append(unknown_group.characters, unknown_char)
+				}
+			}
+
+			has_changes = len(unknown_group.characters) != unknown_group_size // check if we added anyone to "unknown"
+		}
+
+		if !has_any_character {
+			fmt.Fprintln(os.Stderr, "gender: no character data to display!")
+			return nil, nil, false, false
+		}
+	}
+
+	return content, the_comment, has_changes, true
+}
+
+func gender_table_parser(config *config) (*Gender_Data, bool) {
 	text, ok := load_file(fix_path(config.source_file))
 
 	if !ok {
@@ -194,10 +219,10 @@ func gender_table_parser(config *config) (*gender_comment, bool) {
 		text = text[1:]
 	}
 
-	the_comment := &gender_comment {
-		gender_list: make([]*gender_group, 0, 4),
+	the_comment := &Gender_Data {
+		gender_list: make([]*Gender_Group, 0, 4),
 	}
-	the_group := &gender_group {}
+	the_group := &Gender_Group {}
 
 	buffer := bufio.NewReader(strings.NewReader(text))
 
@@ -236,8 +261,8 @@ func gender_table_parser(config *config) (*gender_comment, bool) {
 
 			gender_name := inner_line[7:]
 
-			the_group = &gender_group {
-				characters:  make([]*gender_char, 0, 32),
+			the_group = &Gender_Group {
+				characters:  make([]*Gender_Char, 0, 32),
 				gender_name: gender_name,
 			}
 
@@ -258,10 +283,10 @@ func gender_table_parser(config *config) (*gender_comment, bool) {
 
 		name = names[0]
 
-		char := &gender_char {
-			main_name:   name,
-			all_names:   names,
-			gender_name: the_group.gender_name,
+		char := &Gender_Char {
+			Name:   name,
+			AllNames:   names,
+			Gender: the_group.gender_name,
 		}
 
 		if n := count_all_runes(name); n > the_group.longest_char {
@@ -296,12 +321,12 @@ func gender_table_parser(config *config) (*gender_comment, bool) {
 // remap the character data into a map,
 // ensuring every character is addressable
 // by every variant of their name
-func char_swizzle(the_comment *gender_comment) map[string]*gender_char {
-	new_map := make(map[string]*gender_char, len(the_comment.gender_list) * 32)
+func char_swizzle(the_comment *Gender_Data) map[string]*Gender_Char {
+	new_map := make(map[string]*Gender_Char, len(the_comment.gender_list) * 32)
 
 	for _, gender := range the_comment.gender_list {
 		for _, char := range gender.characters {
-			for _, name := range char.all_names {
+			for _, name := range char.AllNames {
 				new_map[strings.ToLower(name)] = char
 			}
 		}
@@ -394,7 +419,7 @@ func print_data(data *data_container, title string) {
 	}
 }
 
-func crunch_chars_by_lines(the_comment *gender_comment) *data_container {
+func crunch_chars_by_lines(the_comment *Gender_Data) *data_container {
 	data := make(data_order, 0, len(the_comment.gender_list) * 32)
 
 	total_lines := 0
@@ -410,20 +435,20 @@ func crunch_chars_by_lines(the_comment *gender_comment) *data_container {
 		}
 
 		for _, char := range group.characters {
-			if char.line_count == 0 {
+			if char.LineCount == 0 {
 				continue
 			}
 
-			if char.line_count > most_lines {
-				most_lines = char.line_count
+			if char.LineCount > most_lines {
+				most_lines = char.LineCount
 			}
 
-			total_lines += char.line_count
+			total_lines += char.LineCount
 
 			data = append(data, &data_entry {
-				value:    char.line_count,
-				name_one: char.main_name,
-				name_two: char.gender_name,
+				value:    char.LineCount,
+				name_one: char.Name,
+				name_two: char.Gender,
 			})
 		}
 	}
@@ -439,7 +464,7 @@ func crunch_chars_by_lines(the_comment *gender_comment) *data_container {
 	}
 }
 
-func crunch_lines_by_gender(the_comment *gender_comment) *data_container {
+func crunch_lines_by_gender(the_comment *Gender_Data) *data_container {
 	data := make(data_order, 0, len(the_comment.gender_list))
 
 	total_lines := 0
@@ -457,12 +482,12 @@ func crunch_lines_by_gender(the_comment *gender_comment) *data_container {
 		}
 
 		for _, char := range group.characters {
-			if char.line_count == 0 {
+			if char.LineCount == 0 {
 				continue
 			}
 
-			total_lines += char.line_count
-			group_lines += char.line_count
+			total_lines += char.LineCount
+			group_lines += char.LineCount
 
 			if group_lines > most_lines {
 				most_lines = group_lines
@@ -486,7 +511,7 @@ func crunch_lines_by_gender(the_comment *gender_comment) *data_container {
 	}
 }
 
-func crunch_chars_by_gender(the_comment *gender_comment) *data_container {
+func crunch_chars_by_gender(the_comment *Gender_Data) *data_container {
 	data := make(data_order, 0, len(the_comment.gender_list))
 
 	total_chars   := 0
@@ -504,7 +529,7 @@ func crunch_chars_by_gender(the_comment *gender_comment) *data_container {
 		group_chars := 0
 
 		for _, char := range group.characters {
-			if char.line_count > 0 {
+			if char.LineCount > 0 {
 				group_chars ++
 			}
 		}
@@ -538,7 +563,7 @@ func crunch_chars_by_gender(the_comment *gender_comment) *data_container {
 // into the original script text. it does not do the parsing,
 // just provides the actual comment, with any additional
 // discoveries written in
-func (the_comment *gender_comment) String() string {
+func (the_comment *Gender_Data) String() string {
 	buffer := strings.Builder {}
 	buffer.Grow(len(the_comment.gender_list) * 32 * 32)
 
@@ -555,12 +580,12 @@ func (the_comment *gender_comment) String() string {
 
 		for _, char := range group.characters {
 			if do_title {
-				for i, name := range char.all_names {
-					char.all_names[i] = title_case(name)
+				for i, name := range char.AllNames {
+					char.AllNames[i] = title_case(name)
 				}
 			}
 
-			buffer.WriteString(fmt.Sprintf("\t%s\n", strings.Join(char.all_names, " | ")))
+			buffer.WriteString(fmt.Sprintf("\t%s\n", strings.Join(char.AllNames, " | ")))
 		}
 	}
 
@@ -572,7 +597,7 @@ func (the_comment *gender_comment) String() string {
 // takes the input file, strips the original comment out, then
 // rewrites the data as close to the original as possible while
 // updating with new
-func gender_replace_comment(config *config, the_comment *gender_comment) bool {
+func gender_replace_comment(config *config, the_comment *Gender_Data) bool {
 	filepath := fix_path(config.source_file)
 	text, ok := load_file(filepath)
 
