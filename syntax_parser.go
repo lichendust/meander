@@ -469,7 +469,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 
 					if template, ok := macro(line, "pagenumber"); ok {
 						nodes = append(nodes, &syntax_node {
-							node_type: PAGENUMBER,
+							node_type: PAGE_NUMBER,
 							raw_text:  template,
 						})
 						continue

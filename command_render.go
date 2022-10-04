@@ -526,7 +526,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			nodes = consume_node_whitespace(nodes[1:])
 			continue
 
-		case PAGENUMBER:
+		case PAGE_NUMBER:
 			i, err := strconv.Atoi(node.raw_text)
 
 			if err != nil {
