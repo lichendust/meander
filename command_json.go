@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
+	"io/ioutil"
 	"encoding/json"
 )
 
@@ -138,11 +139,17 @@ func command_json(config *config) {
 	}
 
 	// write the file
-	b, err := json.Marshal(json_file)
+	b, err := json.MarshalIndent(json_file, "", "\t")
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to marshal JSON")
+		return
 	}
 
-	os.Stdout.Write(b)
+	err = ioutil.WriteFile(config.output_file, b, 0777)
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "failed to write out JSON")
+		return
+	}
 }

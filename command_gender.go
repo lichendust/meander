@@ -101,9 +101,6 @@ func command_gender_analysis(config *config) {
 }
 
 func do_full_analysis(config *config) (*fountain_content, *Gender_Data, bool, bool) {
-	config.include_notes    = false
-	config.include_synopses = false
-
 	// read comment from input file
 	the_comment, ok := gender_table_parser(config)
 

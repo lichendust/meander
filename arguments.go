@@ -291,6 +291,9 @@ func get_arguments() (*config, bool) {
 
 			case COMMAND_CONVERT:
 				conf.output_file = raw + ".fountain"
+
+			case COMMAND_JSON:
+				conf.output_file = raw + ".json"
 		}
 	}
 
