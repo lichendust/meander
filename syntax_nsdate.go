@@ -44,7 +44,7 @@ const default_timestamp = "d MMM yyyy"
 // and ommitted from render.
 
 func nsdate(input string) string {
-	final := strings.Builder {}
+	final := strings.Builder{}
 
 	t := time.Now()
 

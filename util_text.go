@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -400,4 +401,33 @@ func title_case(input string) string {
 
 func space_pad_string(input string, n int) string {
 	return input + strings.Repeat(" ", n + 2 - count_all_runes(input))
+}
+
+func make_version_number(input string) (uint16, bool) {
+	if input == "" {
+		return 0, false
+	}
+
+	buffer := strings.Builder{}
+	buffer.Grow(4)
+
+	for _, c := range input {
+		if unicode.IsNumber(c) {
+			buffer.WriteRune(c)
+		}
+	}
+
+	s := buffer.String()
+
+	if len(s) == 0 {
+		return 0, false
+	}
+
+	n, err := strconv.ParseInt(s, 10, 16)
+
+	if err != nil {
+		return 0, false
+	}
+
+	return uint16(n), true
 }

@@ -43,6 +43,18 @@ func assign_dual_dialogue(original *syntax_node, nodes []*syntax_node) {
 	}
 }
 
+func find_title_colon(input string) (int, bool) {
+	for i, c := range input {
+		if c == '\n' {
+			return 0, false
+		}
+		if c == ':' {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 func syntax_parser(config *config) (*fountain_content, bool) {
 	text, ok := syntax_preprocessor(config.source_file, config)
 
@@ -71,10 +83,10 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 
 	// title page mini-parser
 	for {
-		n := strings.IndexRune(text, ':')
+		n, ok := find_title_colon(text)
 
 		// if there's no ":", we're done with the title page
-		if n < 0 {
+		if !ok {
 			break
 		}
 

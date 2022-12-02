@@ -8,6 +8,10 @@ import (
 )
 
 type JSON_File struct {
+	Meta struct {
+		Source  string `json:"source"`
+		Version uint16 `json:"version"`
+	} `json:"meta"`
 	Title struct {
 		Title     string `json:"title,omitempty"`
 		Credit    string `json:"credit,omitempty"`
@@ -20,7 +24,7 @@ type JSON_File struct {
 		Contact   string `json:"contact,omitempty"`
 	} `json:"title"`
 	Characters []*Gender_Char `json:"characters,omitempty"`
-	Content    []*JSON_MarkupLine
+	Content    []*JSON_MarkupLine `json:"content"`
 }
 
 type JSON_MarkupLine struct {
@@ -52,6 +56,18 @@ var node_type_convert = map[uint8]string{
 	SECTION:       "section",
 }
 
+const remove_format_chars = true
+
+func strip_on_condition(input string, is_stripped bool) string {
+	if input == "" {
+		return ""
+	}
+	if is_stripped {
+		return clean_string(input)
+	}
+	return input
+}
+
 func command_json(config *config) {
 	content, ok := syntax_parser(config)
 
@@ -62,43 +78,49 @@ func command_json(config *config) {
 
 	json_file := &JSON_File{}
 
+	// meta
+	{
+		version_number, _ := make_version_number(title)
+
+		json_file.Meta.Source  = title
+		json_file.Meta.Version = version_number
+	}
+
 	// title page
 	{
-		json_file.Title.Title     = content.title["title"]
-		json_file.Title.Credit    = content.title["credit"]
-		json_file.Title.Author    = content.title["author"]
-		json_file.Title.Source    = content.title["source"]
-		json_file.Title.Notes     = content.title["notes"]
-		json_file.Title.DraftDate = content.title["draft_date"]
-		json_file.Title.Copyright = content.title["copyright"]
-		json_file.Title.Revision  = content.title["revision"]
-		json_file.Title.Contact   = content.title["contact"]
+		json_file.Title.Title     = strip_on_condition(content.title["title"],      remove_format_chars)
+		json_file.Title.Credit    = strip_on_condition(content.title["credit"],     remove_format_chars)
+		json_file.Title.Author    = strip_on_condition(content.title["author"],     remove_format_chars)
+		json_file.Title.Source    = strip_on_condition(content.title["source"],     remove_format_chars)
+		json_file.Title.Notes     = strip_on_condition(content.title["notes"],      remove_format_chars)
+		json_file.Title.DraftDate = strip_on_condition(content.title["draft date"], remove_format_chars)
+		json_file.Title.Copyright = strip_on_condition(content.title["copyright"],  remove_format_chars)
+		json_file.Title.Revision  = strip_on_condition(content.title["revision"],   remove_format_chars)
+		json_file.Title.Contact   = strip_on_condition(content.title["contact"],    remove_format_chars)
 	}
 
 	// gender
 	{
 		_, data, _, ok := do_full_analysis(config)
 
-		if !ok {
-			return
-		}
+		if ok {
+			length := 0
 
-		length := 0
-
-		for _, group := range data.gender_list {
-			length += len(group.characters)
-		}
-
-		array := make([]*Gender_Char, 0, length)
-
-		for _, group := range data.gender_list {
-			for _, char := range group.characters {
-				char.AllNames = char.AllNames[1:] // drop the duplicate of the main name
-				array = append(array, char)
+			for _, group := range data.gender_list {
+				length += len(group.characters)
 			}
-		}
 
-		json_file.Characters = array
+			array := make([]*Gender_Char, 0, length)
+
+			for _, group := range data.gender_list {
+				for _, char := range group.characters {
+					char.AllNames = char.AllNames[1:] // drop the duplicate of the main name
+					array = append(array, char)
+				}
+			}
+
+			json_file.Characters = array
+		}
 	}
 
 	// content
@@ -116,14 +138,14 @@ func command_json(config *config) {
 
 			case DIALOGUE, PARENTHETICAL, LYRIC:
 				n := len(array) - 1
-				array[n].Dialogue = append(array[n].Dialogue, node.raw_text)
+				array[n].Dialogue = append(array[n].Dialogue, strip_on_condition(node.raw_text, remove_format_chars))
 				continue
 
 			case CHARACTER:
 				array = append(array, &JSON_MarkupLine {
 					Type:      node_type_convert[node.node_type],
 					Revised:   node.revised,
-					Character: node.raw_text,
+					Character: strip_on_condition(node.raw_text, remove_format_chars),
 				})
 				continue
 			}
@@ -131,7 +153,7 @@ func command_json(config *config) {
 			array = append(array, &JSON_MarkupLine {
 				Type:    node_type_convert[node.node_type],
 				Revised: node.revised,
-				Text:    node.raw_text,
+				Text:    strip_on_condition(node.raw_text, remove_format_chars),
 			})
 		}
 

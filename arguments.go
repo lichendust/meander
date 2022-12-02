@@ -28,16 +28,17 @@ const (
 // config is the central location for all
 // user input
 type config struct {
-	command    uint8
+	command uint8
 
-	scenes      uint8
-	template    string
-	paper_size  string
+	scenes     uint8
+	template   string
+	paper_size string
 
 	include_notes    bool
 	include_synopses bool
 	include_sections bool
 	write_gender     bool
+	include_gender   bool
 
 	revision     bool
 	revision_tag string
@@ -181,8 +182,12 @@ func get_arguments() (*config, bool) {
 			conf.include_sections = true
 			continue
 
-		case "update-table":
+		case "update-gender", "u":
 			conf.write_gender = true
+			continue
+
+		case "print-gender", "g":
+			conf.include_gender = true
 			continue
 
 		case "scene", "s":
@@ -283,17 +288,17 @@ func get_arguments() (*config, bool) {
 		raw := conf.source_file[:len(conf.source_file) - len(ext)]
 
 		switch conf.command {
-			case COMMAND_RENDER:
-				conf.output_file = raw + ".pdf"
+		case COMMAND_RENDER:
+			conf.output_file = raw + ".pdf"
 
-			case COMMAND_MERGE:
-				conf.output_file = raw + "_merged" + ext
+		case COMMAND_MERGE:
+			conf.output_file = raw + "_merged" + ext
 
-			case COMMAND_CONVERT:
-				conf.output_file = raw + ".fountain"
+		case COMMAND_CONVERT:
+			conf.output_file = raw + ".fountain"
 
-			case COMMAND_JSON:
-				conf.output_file = raw + ".json"
+		case COMMAND_JSON:
+			conf.output_file = raw + ".json"
 		}
 	}
 
