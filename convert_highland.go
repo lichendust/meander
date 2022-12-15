@@ -4,68 +4,88 @@ import (
 	"io"
 	"os"
 	"fmt"
-	"strings"
+	"bytes"
 	"archive/zip"
+	"path/filepath"
+
+	ns "github.com/danielpaulus/nskeyedarchiver"
 )
 
-/*
-	Highland files are TextBundle-compatible,
-	which means they're a zip file with some
-	junk in them.  Highland stores its core,
-	plain text data in "text.fountain" at the
-	root of the zip, which makes extracting it
-	a simple matter of opening the zip file
-	and copying the file out to an appropriate
-	location
-
-	unfortunately Highland handles its include
-	directives by packing them in some
-	undocumented binary format that I have had
-	poor luck consistently parsing.  It's
-	bizarre because all other ancillary data
-	in ".highland" is just JSON files.  I do
-	know the include file stores the full,
-	absolute path to the included document,
-	which makes sense — it's what Meander works
-	out on the fly to guarantee relative
-	accuracy — but inexplicable as to why it's
-	stored differently to anything else.
-*/
-
 func command_convert_highland(config *config) {
-	archive, err := zip.OpenReader(fix_path(config.source_file))
+	convert(config.source_file)
+}
 
+func convert(file string) {
+	file = filepath.ToSlash(file)
+
+	println(file)
+
+	archive, err := zip.OpenReader(file)
 	if err != nil {
 		panic(err)
 	}
-
 	defer archive.Close()
 
+	dir := filepath.Dir(file)
+	out := rewrite_ext(file, ".fountain")
+
 	for _, f := range archive.File {
-		if !strings.HasSuffix(f.Name, "text.fountain") {
-			continue
+		name := filepath.Base(f.Name)
+
+		if name == "includes.dat" {
+			file, err := f.Open()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%q\n", f.Name)
+				return
+			}
+			defer file.Close()
+
+			blob, err := io.ReadAll(file)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%q\n", f.Name)
+				return
+			}
+
+			x, err := ns.Unarchive(blob)
+			if err != nil {
+				panic(err)
+			}
+
+			the_map := x[0].(map[string]interface{})
+
+			for k := range the_map {
+				convert(filepath.Join(dir, k))
+			}
 		}
+	}
 
-		destination, err := os.OpenFile(fix_path(config.output_file), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+	for _, f := range archive.File {
+		name := filepath.Base(f.Name)
 
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "convert: error extracting %q\n", config.output_file)
-			return
-		}
+		if name == "text.md" {
+			s, err := f.Open()
+			if err != nil {
+				panic(err)
+			}
+			defer s.Close()
 
-		defer destination.Close()
+			/*d, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+			if err != nil {
+				panic(err)
+			}
+			defer d.Close()*/
 
-		file, err := f.Open()
+			blob, err := io.ReadAll(s)
+			if err != nil {
+				panic(err)
+			}
 
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "convert: error extracting %q\n", config.output_file)
-			return
-		}
-		
-		defer file.Close()
+			blob = bytes.ReplaceAll(blob, []byte(".highland}}"), []byte(".fountain}}"))
 
-		if _, err := io.Copy(destination, file); err != nil {
-			fmt.Fprintf(os.Stderr, "convert: error extracting %q\n", config.output_file)
+			err = os.WriteFile(out, blob, 0777)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 }
