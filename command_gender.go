@@ -2,14 +2,12 @@ package main
 
 import (
 	"os"
+	"io"
 	"fmt"
 	"math"
 	"sort"
 	"bufio"
 	"strings"
-
-	"io"
-	"io/ioutil"
 )
 
 type Gender_Data struct {
@@ -636,7 +634,7 @@ func gender_replace_comment(config *config, the_comment *Gender_Data) bool {
 	buffer.WriteString(input)
 	buffer.WriteString(copy[ending_byte:])
 
-	err := ioutil.WriteFile(filepath, []byte(buffer.String()), 0777)
+	err := os.WriteFile(filepath, []byte(buffer.String()), 0777)
 
 	if err != nil {
 		return false

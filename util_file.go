@@ -3,20 +3,14 @@ package main
 import (
 	"os"
 	"strings"
-	"io/ioutil"
 	"path/filepath"
 )
 
 func load_file(source_file string) (string, bool) {
-	f, err := os.Open(source_file)
-
+	bytes, err := os.ReadFile(source_file)
 	if err != nil {
 		return "", false
 	}
-
-	defer f.Close()
-
-	bytes, err := ioutil.ReadAll(f)
 
 	if err != nil {
 		return "", false
@@ -50,6 +44,30 @@ func include_path(parent, input string) string {
 		return filepath.Join(filepath.Dir(parent), input)
 	}
 	return input
+}
+
+func find_file(start_location, target string) (string, bool) {
+	final_path := ""
+
+	err := filepath.Walk(start_location, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == start_location {
+			return nil
+		}
+
+		if filepath.Base(path) == target {
+			final_path = path
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", false
+	}
+
+	return final_path, final_path != ""
 }
 
 // makes working_dir output from input
@@ -104,7 +122,6 @@ func find_default_file() string {
 		files = append(files, path)
 		return nil
 	})
-
 	if err != nil {
 		return ""
 	}
@@ -139,4 +156,11 @@ func find_default_file() string {
 	}
 
 	return ""
+}
+
+func rewrite_ext(path, new_ext string) string {
+	ext := filepath.Ext(path)
+	raw := path[:len(path) - len(ext)]
+
+	return raw + new_ext
 }

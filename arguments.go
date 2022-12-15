@@ -3,9 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
-	"runtime"
 	"strings"
-	"path/filepath"
 )
 
 const (
@@ -43,7 +41,6 @@ type config struct {
 	revision     bool
 	revision_tag string
 
-	font_name   string
 	source_file string
 	output_file string
 }
@@ -237,21 +234,6 @@ func get_arguments() (*config, bool) {
 			}
 			continue
 
-		case "font":
-			if !font_flag_supported {
-				fmt.Fprintf(os.Stderr, "args: --font searching not supported on %s\n", strings.Title(runtime.GOOS))
-				has_errors = true
-			}
-
-			if b != "" {
-				conf.font_name = b
-				counter ++
-			} else {
-				fmt.Fprintln(os.Stderr, "args: missing font selection")
-				has_errors = true
-			}
-			continue
-
 		default:
 			fmt.Fprintf(os.Stderr, "args: %q flag is unknown\n", a)
 			has_errors = true
@@ -284,21 +266,18 @@ func get_arguments() (*config, bool) {
 	}
 
 	if conf.output_file == "" {
-		ext := filepath.Ext(conf.source_file)
-		raw := conf.source_file[:len(conf.source_file) - len(ext)]
-
 		switch conf.command {
 		case COMMAND_RENDER:
-			conf.output_file = raw + ".pdf"
+			conf.output_file = rewrite_ext(conf.output_file, ".pdf")
 
 		case COMMAND_MERGE:
-			conf.output_file = raw + "_merged" + ext
+			conf.output_file = rewrite_ext(conf.output_file, "_merged.pdf")
 
 		case COMMAND_CONVERT:
-			conf.output_file = raw + ".fountain"
+			conf.output_file = rewrite_ext(conf.output_file, ".fountain")
 
 		case COMMAND_JSON:
-			conf.output_file = raw + ".json"
+			conf.output_file = rewrite_ext(conf.output_file, ".json")
 		}
 	}
 

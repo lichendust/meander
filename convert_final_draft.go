@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"bytes"
 	"strings"
-	"io/ioutil"
 	"encoding/xml"
 )
 
@@ -60,16 +59,10 @@ type XML_Chunk struct {
 }
 
 func parse_final_draft_xml(source_file string) (*XML_FinalDraft, bool) {
-	xml_data, err := os.Open(source_file)
-
+	byte_stream, err := os.ReadFile(source_file)
 	if err != nil {
 		panic(err)
-		return nil, false
 	}
-
-	defer xml_data.Close()
-
-	byte_stream, _ := ioutil.ReadAll(xml_data)
 
 	// in order to capture <DynamicLabels> as part of <Text> arrays
 	// we just... swap the literal text like a absolute maniac.
@@ -268,7 +261,7 @@ func command_convert_final_draft(config *config) {
 	}
 
 	// @todo replace me with standard file writer
-	err := ioutil.WriteFile(fix_path(config.output_file), []byte(buffer.String()), 0777)
+	err := os.WriteFile(fix_path(config.output_file), []byte(buffer.String()), 0777)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write %s\n", config.output_file)

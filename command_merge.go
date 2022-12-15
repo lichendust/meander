@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"strings"
-	"io/ioutil"
 	"unicode/utf8"
 )
 
@@ -17,7 +16,7 @@ func command_merge_document(config *config) {
 	}
 
 	// @todo replace me with standard file writer
-	err := ioutil.WriteFile(fix_path(config.output_file), []byte(merged_file), 0777)
+	err := os.WriteFile(fix_path(config.output_file), []byte(merged_file), 0777)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write %s\n", config.output_file)
