@@ -268,16 +268,16 @@ func get_arguments() (*config, bool) {
 	if conf.output_file == "" {
 		switch conf.command {
 		case COMMAND_RENDER:
-			conf.output_file = rewrite_ext(conf.output_file, ".pdf")
+			conf.output_file = rewrite_ext(conf.source_file, ".pdf")
 
 		case COMMAND_MERGE:
-			conf.output_file = rewrite_ext(conf.output_file, "_merged.pdf")
+			conf.output_file = rewrite_ext(conf.source_file, "_merged.pdf")
 
 		case COMMAND_CONVERT:
-			conf.output_file = rewrite_ext(conf.output_file, ".fountain")
+			conf.output_file = rewrite_ext(conf.source_file, ".fountain")
 
 		case COMMAND_JSON:
-			conf.output_file = rewrite_ext(conf.output_file, ".json")
+			conf.output_file = rewrite_ext(conf.source_file, ".json")
 		}
 	}
 
