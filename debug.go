@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 )
 
 var debug_title_order = []string {
@@ -170,15 +169,5 @@ func (node *syntax_node) String() string {
 func debug_print_screenplay(content *fountain_content) {
 	for _, node := range content.nodes {
 		fmt.Println(node)
-	}
-}
-
-func debug_fonts(input_name string, results map[string]string) {
-	fmt.Printf("requested:   %s\nin path:     %s\n\n", input_name, strings.Join(system_dirs, ";"))
-
-	for _, weight := range []string{"regular", "bold", "italic", "bolditalic"} {
-		if x, ok := results[weight]; ok {
-			fmt.Printf("%-12s %s\n", weight, x)
-		}
 	}
 }

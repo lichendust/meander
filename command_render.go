@@ -42,7 +42,6 @@ func set_color(document *gopdf.GoPdf, color print_color) {
 // applies styles using the library's dumb API
 func set_font(document *gopdf.GoPdf, style string) {
 	err := document.SetFont(reserved_name, style, font_size)
-
 	if err != nil {
 		panic(err)
 	}
@@ -52,9 +51,8 @@ func set_font(document *gopdf.GoPdf, style string) {
 // of the current font
 func text_width(document *gopdf.GoPdf, t string) float64 {
 	w, err := document.MeasureTextWidth(t)
-
 	if err != nil {
-		panic(err) // this is a timebomb
+		panic(err)
 	}
 
 	return w
@@ -117,33 +115,14 @@ func command_render_document(config *config) {
 		}
 	}
 
-	// init the document
-	document := gopdf.GoPdf {}
+	document := gopdf.GoPdf{}
 
-	// load the paper data to apply it...
 	paper := paper_store[config.paper_size]
-
-	// ...to the document
-	document.Start(gopdf.Config {
+	document.Start(gopdf.Config{
 		PageSize: *paper.paper_data,
 	})
 
-	// cache all our fonts ready for printing
-	{
-		ok := false
-
-		if config.font_name == "" {
-			ok = register_default_fonts(&document)
-		} else {
-			ok = register_custom_fonts(&document, config.font_name)
-		}
-
-		if !ok {
-			return // we should @error here
-		}
-	}
-
-	// set the base font
+	register_fonts(&document)
 	set_font(&document, "")
 
 	// we print in black, so make sure it's set
@@ -155,7 +134,7 @@ func command_render_document(config *config) {
 	// embed some info — doesn't seem to work?
 	// need to check the library issues.
 	{
-		info := gopdf.PdfInfo {}
+		info := gopdf.PdfInfo{}
 
 		if x, ok := content.title["title"]; ok {
 			info.Title = clean_string(x)
