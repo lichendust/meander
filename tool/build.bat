@@ -38,7 +38,7 @@ if not exist "%build_dir%\%name%" md "%build_dir%\%name%"
 set GOOS=%1
 set GOARCH=%2
 
-go build -ldflags "-s -w" -trimpath -o %build_dir%\%name%\meander%3
+go build -ldflags "-s -w" -trimpath -o %build_dir%\%name%\meander%3 ./source
 
 if %errorlevel% neq 0 exit 1
 exit /B 0

@@ -5,11 +5,13 @@
 
 set -e
 
-printf "package main" > command_help_text.go
+target=source/command_help_text.go
+
+printf "package main" > $target
 
 for f in help/*.txt; do
 	name=$(basename ${f%%.txt})
 	data=$(fold -w 64 -s $f)
 
-	printf "\n\nconst comm_$name = \`\n$data\`" >> command_help_text.go
+	printf "\n\nconst comm_$name = \`\n$data\`" >> $target
 done

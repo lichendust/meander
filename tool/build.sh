@@ -21,7 +21,7 @@ build() {
 	fi
 
 	mkdir -p "$build_dir/$name"
-	env GOOS="$1" GOARCH="$2" go build -ldflags "-s -w" -trimpath -o "$build_dir/$name/meander$3"
+	env GOOS="$1" GOARCH="$2" go build -ldflags "-s -w" -trimpath -o "$build_dir/$name/meander$3" ./source
 }
 
 build windows amd64 ".exe"
