@@ -21,6 +21,7 @@ In spite of this quite scary table of contents, Meander is *extremely* simple to
 	- [Render](#render)
 	- [Merge](#merge)
 	- [Gender](#gender)
+	- [Data](#data)
 	- [Convert](#convert)
 		- [A Note on Highland](#a-note-on-highland)
 		- [A Note on Final Draft](#a-note-on-final-draft)
@@ -51,19 +52,19 @@ Meander is very simple to use.  Render your first screenplay with —
 
 	$ meander
 
-If there's only one Fountain file in the working directory, Meander will just choose that one.  Otherwise, it will give priority to files named `main` or `manifest` or `root` — a monolithic file where you might use [include](#includes) to combine individual scene files into a full screenplay.
+If there's only one Fountain file in the working directory, Meander will just choose that one.
 
-If your screenplay *isn't* named `main`, which it likely isn't, you can specify the target file with an argument —
+If you're dealing with multiple files, you can specify the target file with an argument —
 
 	$ meander myfilm.fountain
 
-This will create a file `myfilm.pdf` alongside the original file, regardless of the current working directory.
+This will create a file `myfilm.pdf` *alongside the original file*.
 
 You can then get *really* adventurous by naming the PDF file yourself —
 
 	$ meander myfilm.fountain "My Magnum Opus.pdf"
 
-— though you'll need to be explicit about the full path of the output, otherwise it will put it wherever you happen to be.
+— though now you'll have to be explicit about where you want that PDF to go.
 
 ## Basic Commands
 
@@ -72,8 +73,15 @@ The base Meander commands, which should always be the first argument, are —
 + `render`
 + `merge`
 + `gender`
++ `data`
++ `convert`
 
-There is also a detailed `help` command which teaches you how to use itself.
+There's also the usual self-explanatory stuff —
+
++ `help`
++ `version`
+
+Full documentation for both Fountain and Meander is available from within the binary using the `help` command.
 
 ### Render
 
@@ -91,7 +99,7 @@ Using the directive —
 
 	{{include: scenes/some_file.fountain}}
 
-— somewhere in your Fountain file will cause it to import the contents of the path at that location.  The include paths used are *relative to the file they're written in*, not where Meander is being run from.
+— somewhere in your Fountain file will cause it to import the contents of the path at that location.  The include paths used are *relative to the file they're written in*.
 
 ⚠ Includes in Meander are infinitely recursive, meaning you can turtle all the way down with child files as many levels as makes you happy, but **they're not cycle-safe**.  You will get a stack overflow or an infinite loop where your computer runs out of memory if you circularly include files.
 
@@ -145,6 +153,21 @@ Characters can also have multiple names — `Jess` and `Young Jess`, for example
 
 Only include the actual gender data in the boneyard, with at least one `[gender.x]` header as the first non-whitespace text inside.  Whitespace, indentation and letter casings are not considered.
 
+### Data
+
+The data command generates a JSON file containing the content of and data about a given Fountain file.
+
+	$ meander data [some_film.fountain] [data.json]
+
+This is provided as a useful (but lossy[^2]) data exchange format.  Rather than conversion to other screenplay tools, this is intended for use with non-screenplay software, such as furnishing production-tracking tools with screenplay metadata or dumping statistics into spreadsheets.
+
+The resulting JSON blob is a dictionary containing four entries:
+
++ `meta` — information about the version of Meander and the JSON format.
++ `title` — a dictionary of the title page entries.
++ `characters` — a list of all characters in the screenplay, their alternate names and gender from the gender analysis table, as well as the number of lines they actually speak.
++ `content` — a syntactic breakdown list of the screenplay content, with each paragraph or dialogue entry, etc., tagged by its type.
+
 ### Convert
 
 Meander can also convert certain formats from other screenwriting tools into plain text —
@@ -152,9 +175,7 @@ Meander can also convert certain formats from other screenwriting tools into pla
 + `.highland` files from [Highland 2](https://highland2.app).
 + `.fdx` files from [Final Draft](https://www.finaldraft.com).
 
-```
-$ meander convert input.fdx
-```
+	$ meander convert input.fdx
 
 Meander will detect the input format (and report back if it doesn't know what to do with it), then output a Fountain file alongside the original with a matching file name.  You can also override the output path with another argument, as with other commands.
 
@@ -299,17 +320,17 @@ In a similar vein, the current page number can also be reset by using —
 Building Meander is super easy.  Install [Go](https://golang.org) — check the `go.mod` file for the most up-to-date information on versions, then clone this repository and run:
 
 ```sh
-go mod tidy                    # to fetch libraries
-go build -ldflags "-s -w"      # strips garbage from the binary
+go mod tidy
+go build -ldflags "-s -w" -trimpath ./source
 ```
 
-You're done.  There should be a shiny executable in the build directory, all ready to run.
+These commands will fetch the dependencies, which are extremely minimal (see just below) and then build the smallest possible binary.  With that, you're done.  There should be a shiny executable in the , all ready to run.
 
 Great care has been taken to minimise the use of libraries in Meander for future-proofedness and maintainability.  We currently only rely on —
 
 + `gopdf` — [source](https://github.com/signintech/gopdf)
 + `isatty` — [source](https://github.com/mattn/go-isatty)
-+ `levenshtein` — [source](https://github.com/agnivade/levenshtein)
++ `NSKeyedArchiver` — [source](github.com/danielpaulus/nskeyedarchiver), which is only used for `.highland` conversions.
 
 ## Attribution
 
@@ -355,3 +376,5 @@ margin = inch * 2.5
 Available upon request!  It's not obvious which additional paper sizes may be most useful to anyone, with A4 and US Letter being the geographical standards for production documents worldwide, so please submit an issue if this seems a critical oversight.
 
 [^1]: "Magic comments" are generally to be avoided, but this was intentionally designed to play nicely with other Fountain tools while ensuring the gender table can still travel with the screenplay, instead of being fed in by a separate file.
+
+[^2]: 'Lossy' here means inline formatting like \*italics\* are removed.  I've yet to encounter an NLE, production tracker or spreadsheet program that understands Markdown formatters, so Meander prefers to remove them.  This simplifies the JSON file immensely, as each paragraph is single, clean string and no additional work is required to reassemble them in a target format or program.
