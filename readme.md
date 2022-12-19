@@ -175,7 +175,9 @@ Meander can also convert certain formats from other screenwriting tools into pla
 + `.highland` files from [Highland 2](https://highland2.app).
 + `.fdx` files from [Final Draft](https://www.finaldraft.com).
 
-	$ meander convert input.fdx
+```sh
+$ meander convert input.fdx
+```
 
 Meander will detect the input format (and report back if it doesn't know what to do with it), then output a Fountain file alongside the original with a matching file name.  You can also override the output path with another argument, as with other commands.
 
@@ -183,19 +185,25 @@ Meander will detect the input format (and report back if it doesn't know what to
 
 #### A Note on Highland
 
-For Highland — which is TextBundle based — it simply extracts the plain text exactly as it is displayed within the original editor.  This, of course, works without fail.
+For Highland — which is TextBundle based — it simply extracts the plain text exactly as it is displayed within the original editor.
 
-However, Highland's native `{{include}}` system, while syntactically compatible with Meander, is not guaranteed to work correctly due to the file references being stored in a bizarre undocumented binary format (the only part of the Highland format which is not plain-text and which I have had little luck reverse engineering).
+However, Highland has a major semantic difference in the way its `{{include}}` system works.  In Meander, includes are just the relative path to the target file.  If that file is in a subdirectory, the include would be formatted as `{{include: act_one/scenes/file.fountain}}`.
 
-This means Meander cannot recursively convert all files involved in a screenplay because it cannot find them.  It also cannot automatically correct the include paths because those paths are "locked away".
+In Highland, includes are only *ever* the basename of the file — `{{include: some_file.highland}}` — because an internal mapping is used to locate the files via APFS file references on macOS.  This is unusable by Meander because of its enforced platform-agnosticism, but it's also completely useless on non-Mac platforms.
 
-In short, the basic extraction handler has been left in Meander for now because it *is* faster than manually unzipping the Highland file, but it lacks the quality of life feature that is automagically converting all connected/included files.
+This means that Meander takes a manual approach to extracting a web of connected Highland files.  Starting from the target file, it simply searches across and down on the filesystem for files that match the literal name in the `{{include}}`.  *It will not search **above** the starting file.*
+
+When it finds them, it then rewrites the `{{include}}` in the text of the current file to match wherever it found the target file — making it idiomatically Meander-like — and then tries to extract that file the same way in its own location.
+
+So for the purposes of automatic conversion, all the relevant files must be gathered in one place or one set of folders below the starting file; they can't be all over your hard-drive (as is eminently possible to do with Highland).
 
 #### A Note on Final Draft
 
 For Final Draft — which is XML based — Meander parses the XML and attempts to write out a decent approximation in Fountain.  It also adds force-characters to text that it knows Fountain would not recognise as its Final Draft designation.
 
-As far as testing goes, it seems to work very accurately on basic screenplays (and seems to convert FDX files better than some other tools tested).  However, only a limited number of files have been tested, none of which have contained more advanced Final Draft features like page-locking, colours and versioning, which will likely cause Meander to stumble.
+As far as testing goes, it seems to work very accurately on basic screenplays.  However, only a limited number of files have been tested, none of which have contained more advanced Final Draft features like page-locking, colours and versioning, which will likely cause Meander to stumble.
+
+If you're a Final Cut user and can provide example files that demonstrate any issues with Meander's conversion, please reach out!
 
 ## Additional Flags
 
@@ -328,9 +336,8 @@ These commands will fetch the dependencies, which are extremely minimal (see jus
 
 Great care has been taken to minimise the use of libraries in Meander for future-proofedness and maintainability.  We currently only rely on —
 
-+ `gopdf` — [source](https://github.com/signintech/gopdf)
-+ `isatty` — [source](https://github.com/mattn/go-isatty)
-+ `NSKeyedArchiver` — [source](github.com/danielpaulus/nskeyedarchiver), which is only used for `.highland` conversions.
++ `gopdf` — [source](https://github.com/signintech/gopdf), which is how Meander writes its PDF files.
++ `isatty` — [source](https://github.com/mattn/go-isatty), which is just used to detect whether we can use colours in terminal outputs.
 
 ## Attribution
 

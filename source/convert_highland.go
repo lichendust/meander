@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"archive/zip"
 	"path/filepath"
-
-	ns "github.com/danielpaulus/nskeyedarchiver"
 )
 
 func command_convert_highland(config *config) {
@@ -28,36 +26,6 @@ func convert(file string) {
 
 	dir := filepath.Dir(file)
 	out := rewrite_ext(file, ".fountain")
-
-	for _, f := range archive.File {
-		name := filepath.Base(f.Name)
-
-		if name == "includes.dat" {
-			file, err := f.Open()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%q\n", f.Name)
-				return
-			}
-			defer file.Close()
-
-			blob, err := io.ReadAll(file)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%q\n", f.Name)
-				return
-			}
-
-			x, err := ns.Unarchive(blob)
-			if err != nil {
-				panic(err)
-			}
-
-			the_map := x[0].(map[string]interface{})
-
-			for k := range the_map {
-				convert(filepath.Join(dir, k))
-			}
-		}
-	}
 
 	for _, f := range archive.File {
 		name := filepath.Base(f.Name)
