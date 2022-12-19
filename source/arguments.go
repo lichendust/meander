@@ -114,7 +114,7 @@ func get_arguments() (*config, bool) {
 				args = args[1:]
 				continue
 
-			case "json":
+			case "data":
 				conf.command = COMMAND_JSON
 				args = args[1:]
 				continue
