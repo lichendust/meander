@@ -14,6 +14,8 @@ func init() {
 }
 
 func command_help() {
+	defer fmt.Println() // trailing newline
+
 	args := os.Args[2:]
 
 	if len(args) == 0 {

@@ -36,8 +36,9 @@ $1Paper Size$0
 
 Note that for maximum compatibility, "paper" and "format" should *not* be the first entries in the title page.  Most parsers will reject the entire title page if the first entry is unknown to them, but will quietly skip later ones.  This is never a guarantee, but it may be useful.
 
-$1Preserve Notes and/or Synopses$0
-------------------------------
+$1Force Hidden Syntaxes$0
+---------------------
 
     $1--notes$0
     $1--synopses$0
+    $1--sections$0

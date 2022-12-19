@@ -142,9 +142,9 @@ $1Dialogue$0
 Dialogue is any text following a Character or Parenthetical 
 element and ends on a linebreak.
 
-DAN
-Then let's retire them. 
-Permanently.
+    DAN
+    Then let's retire them.
+    Permanently.
 
 
 $1Dual Dialogue$0
@@ -153,11 +153,11 @@ $1Dual Dialogue$0
 Dual, or simultaneous, dialogue is expressed by adding a caret 
 ^ after the second Character element.
 
-BRICK
-Screw retirement.
+    BRICK
+    Screw retirement.
 
-STEEL ^
-Screw retirement.
+    STEEL ^
+    Screw retirement.
 
 Any number of spaces between the Character name and the caret 
 are acceptable, and will be ignored. All that matters is that 
@@ -169,8 +169,8 @@ $1Lyrics$0
 
 Lyrics are lines with a tilde $1~$0
 
-~Willy Wonka! Willy Wonka! The amazing chocolatier!
-~Willy Wonka! Willy Wonka! Everybody give a cheer!
+    ~Willy Wonka! Willy Wonka! The amazing chocolatier!
+    ~Willy Wonka! Willy Wonka! Everybody give a cheer!
 
 Meander will style these like Dialogue (regardless of proximity 
 to other dialogue elements) and italicise them.
@@ -193,10 +193,9 @@ with a greater-than symbol $1>$0
 $1Centered Text$0
 -------------
 
-Centered text constitutes an Action element, and is bracketed 
-with greater/less-than:
+Centered text is bracketed with greater/less-than:
 
-    $!>$0 THE END $1<$0
+    $1>$0 THE END $1<$0
 
 Spaces between the greater/less-than symbols and the target 
 text are ignored.
@@ -206,8 +205,8 @@ $1Emphasis$0
 --------
 
 Fountain inherits Markdown's rules for emphasis, except that it 
-modifies the use of underscores for underlining, something that 
-the web-focused Markdown has no need for.
+reserves the use of underscores for underlining, something that 
+web-focused Markdown has no need for.
 
     $1*$0italics$1*$0
     $1**$0bold$1**$0
@@ -242,7 +241,7 @@ $1Title Page$0
 ----------
 
 The optional Title Page is always the first thing in a Fountain 
-document. Information is encoding in the format $1key: value$0. 
+document. Information is encoded in the format $1key: value$0. 
 Keys can have spaces (like $1Draft Date$0), but must end with a 
 colon.
 
@@ -316,8 +315,90 @@ $1Indentation$0
 Tabbed or spaced indentation is ignored by Fountain and treated 
 as if they were not there.
 
-The exception is in Action elements, as aforementioned, where 
-they are respected.`
+This means you can manually indent your character dialogue, 
+should you choose to do so, and Meander will have no trouble 
+reading it.
+
+                SOME DUDE
+            (angry)
+        Hey!  That's my waffle!
+
+The exception to this is in Action elements, as aforementioned, 
+where indentation is respected.
+
+
+$1Meander's Syntax Extensions$0
+---------------------------
+
+Meander extends the core Fountain syntax with some of its own 
+features and some borrowed from other screenwriting tools.
+
+
+$1Directives$0
+----------
+
+Meander recognises Highland 2-style directives.
+
+$1Includes$0
+
+    {{include: scenes/1_02.fountain}}
+
+Includes let you...
+
+$1Counters$0
+
+    {{series}}
+    {{figure}}
+    {{chapter}}
+    {{panel}}
+
+Counters are substitute values that increment automatically 
+every time they are encountered.  You can set (or restart) the 
+starting value to any number like so:
+
+    {{series: 1}}
+
+$1Timestamps$0
+
+    {{timestamp: dd MM yyyy}}
+
+Timestamps will substitute the current date / time, helpful for 
+those of us who forget to change the dates on their drafts.  
+Timestamp uses a sensible default, but you can use a custom 
+pattern using any of the following characters:
+
+    $1Days$0
+    d       2
+    dd      02
+    E       Mon
+    EEEE    Monday
+
+    $1Months$0
+    M       1
+    MM      01
+    MMM     Jan
+    MMMM    January
+
+    $1Years$0
+    y       2022
+    yy      22
+
+    $1Hours$0
+    h       3
+    hh      03
+    HH      15
+    a       PM
+
+    $1Minutes$0
+    m       4
+    mm      04
+
+    $1Seconds$0
+    s       5
+    ss      05
+
+    $1Milliseconds$0
+    SSS     .000`
 
 const comm_gender = `
 $1Gender Usage$0
@@ -508,8 +589,9 @@ parsers will reject the entire title page if the first entry is
 unknown to them, but will quietly skip later ones.  This is 
 never a guarantee, but it may be useful.
 
-$1Preserve Notes and/or Synopses$0
-------------------------------
+$1Force Hidden Syntaxes$0
+---------------------
 
     $1--notes$0
-    $1--synopses$0`
+    $1--synopses$0
+    $1--sections$0`
