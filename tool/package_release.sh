@@ -1,5 +1,8 @@
 #!/bin/bash
 
+rm -f build/*.zip
+rm -f build/*.sha512sum
+
 build_dir="build"
 
 set -e
@@ -15,7 +18,7 @@ rm -f $build_dir/*.sha512sum
 printf "[packaging]\n"
 
 for f in $build_dir/*; do
-	base=$(basename $f)
+	base=meander_$(basename $f)
 
 	echo $base
 
@@ -23,9 +26,9 @@ for f in $build_dir/*; do
 
 	mkdir -p $f/license/
 
-	cp -n font/OFL.txt $f/license/courier_prime.txt
-	cp -n license      $f/license/meander.txt
-	cp -n readme.md    $f/readme.txt
+	cp -n font/OFL.txt    $f/license/courier_prime.txt
+	cp -n license         $f/license/meander.txt
+	cp -n readme.fountain $f/readme.fountain
 
 	pushd $f > /dev/null
 	zip -r "../$name.zip" * > /dev/null

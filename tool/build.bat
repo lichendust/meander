@@ -13,6 +13,10 @@ call :build linux arm64          || exit /B
 call :build darwin amd64         || exit /B
 call :build darwin arm64         || exit /B
 
+call :build freebsd amd64 || exit /B
+call :build netbsd  amd64 || exit /B
+call :build openbsd amd64 || exit /B
+
 exit /B 0
 
 :build

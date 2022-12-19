@@ -57,23 +57,17 @@ type syntax_line struct {
 	// anything in between is a
 	// defining "switch" that does not
 	// contain anything
-	leaves     []*syntax_leaf
+	leaves []*syntax_leaf
 
 	// ranges for each block-draw element, in
 	// the form [start, end, start, end]
-	// where each int is a character position
 	underline  []int
 	strikeout  []int
 	highlight  []int
 
 	// used to force a stylistic override on
-	// the entire line. effectively changes
-	// the "baseline" style (bold, italics)
-	// that we reset to
+	// the entire line.
 	// gopdf uses a horrid "BI" string to define
-	// which font variant to use, despite using
-	// very nice preset style enums to register
-	// the fonts in the first place.  weird.
 	font_reset string
 }
 
