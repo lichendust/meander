@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"fmt"
-	"math"
 	"time"
 	"strings"
 	"strconv"
@@ -166,6 +165,19 @@ func command_render_document(config *config) {
 }
 
 func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_content) {
+	has_any := false
+
+	for _, c := range []string{"title", "credit", "author", "source", "notes", "copyright", "contact", "revision", "draft date"} {
+		if _, ok := content.title[c]; ok {
+			has_any = true
+			break
+		}
+	}
+
+	if !has_any {
+		return
+	}
+
 	document.AddPage()
 
 	// get a bunch of the data we need in advance
@@ -1003,7 +1015,7 @@ func draw_character_block(document *gopdf.GoPdf, nodes []*syntax_node, start_pos
 }
 
 func render_gender_data(document *gopdf.GoPdf, config *config) {
-	content, data, has_updated, ok := do_full_analysis(config)
+	_, data, has_updated, ok := do_full_analysis(config)
 
 	if !ok {
 		return // no gender data
@@ -1023,29 +1035,21 @@ func render_gender_data(document *gopdf.GoPdf, config *config) {
 	start_y := margin_top
 
 	{
-		title, ok := content.title["title"]
-
-		if ok {
-			title = clean_string(title)
-		} else {
-			title = config.source_file
-		}
-
-		title_line := syntax_leaf_parser(fmt.Sprintf("%q Gender Analysis", title), 500, 0)[0]
+		title_line := syntax_leaf_parser("GENDER ANALYSIS", 500, 0)[0]
 		syntax_line_override(title_line, UNDERLINE | BOLD)
 		draw_text(document, title_line, start_x, start_y, LEFT, &line_data{})
 
 		start_y += pica * 2
 	}
 
-	start_y = print_data_block(document, config, crunch_chars_by_gender(data), "Character Count by Gender", start_x, start_y)
+	start_y = print_data_block(document, config, crunch_chars_by_gender(data), "Character Count by Gender", start_x, start_y, true)
 	start_y += pica * 2
-	start_y = print_data_block(document, config, crunch_lines_by_gender(data), "Lines by Gender", start_x, start_y)
+	start_y = print_data_block(document, config, crunch_lines_by_gender(data), "Lines by Gender", start_x, start_y, true)
 	start_y += pica * 2
-	start_y = print_data_block(document, config, crunch_chars_by_lines(data), "Characters by Lines Spoken", start_x, start_y)
+	start_y = print_data_block(document, config, crunch_chars_by_lines(data), "Characters by Lines Spoken", start_x, start_y, false)
 }
 
-func print_data_block(document *gopdf.GoPdf, config *config, data *data_container, title string, pos_x, pos_y float64) float64 {
+func print_data_block(document *gopdf.GoPdf, config *config, data *data_container, title string, pos_x, pos_y float64, do_bar_graph bool) float64 {
 	template := template_store[config.template]
 	line_height := template.line_height_title
 
@@ -1054,11 +1058,11 @@ func print_data_block(document *gopdf.GoPdf, config *config, data *data_containe
 
 	set_font(document, "B")
 
-	document.Text(strings.ToUpper(title))
-
-	pos_y += pica * 2
+	document.Text(title)
 
 	set_font(document, "")
+
+	pos_y += pica * 2
 
 	for _, entry := range data.ordered_data {
 		if entry.value == 0 {
@@ -1081,9 +1085,9 @@ func print_data_block(document *gopdf.GoPdf, config *config, data *data_containe
 			buffer.WriteString(space_pad_string(fmt.Sprintf("%.1f%%", percentage), 8))
 		}
 
-		{
-			bar_graph := int(math.Round((float64(entry.value) - 0) / (float64(data.largest_value) - 0) * 20))
-			buffer.WriteString(strings.Repeat("—", bar_graph))
+		if do_bar_graph {
+			bar_graph := normalise(entry.value, data.largest_value, 20)
+			buffer.WriteString(strings.Repeat("|", bar_graph))
 		}
 
 		document.SetX(pos_x)

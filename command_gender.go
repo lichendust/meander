@@ -53,7 +53,7 @@ func command_gender_analysis(config *config) {
 		should fix that.
 
 		I've left this here even though it's not technically
-		occurring in this function, it's a systemic issue.
+		occurring in this function; rather it's a systemic issue.
 	*/
 
 	if running_in_term {
@@ -402,7 +402,7 @@ func print_data(data *data_container, title string) {
 		}
 
 		{
-			bar_graph := int(math.Round((float64(entry.value) - 0) / (float64(data.largest_value) - 0) * 20))
+			bar_graph := normalise(entry.value, data.largest_value, 20)
 			fmt.Print(strings.Repeat("▪", bar_graph))
 		}
 
@@ -641,4 +641,8 @@ func gender_replace_comment(config *config, the_comment *Gender_Data) bool {
 	}
 
 	return true
+}
+
+func normalise(value, largest, max int) int {
+	return int(math.Round(float64(value) / float64(largest) * float64(max)))
 }
