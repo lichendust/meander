@@ -67,7 +67,7 @@ func find_file(start_location, target string) (string, bool) {
 		return "", false
 	}
 
-	return final_path, final_path != ""
+	return filepath.ToSlash(final_path), final_path != ""
 }
 
 // makes working_dir output from input
