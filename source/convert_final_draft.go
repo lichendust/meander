@@ -1,28 +1,49 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
-	"os"
-	"fmt"
 	"bytes"
-	"strings"
 	"encoding/xml"
+	"fmt"
+	"os"
+	"strings"
 )
+
+const final_draft_extension = ".fdx"
 
 // we discard _a lot_ of crufty data that's
 // not useful to us in Fountain, but try to
 // safely apply stuff we can understand
 
 type XML_FinalDraft struct {
-	XMLName    xml.Name         `xml:"FinalDraft"`
-	Content    []*XML_Paragraph `xml:"Content>Paragraph"`
-	Title      []*XML_Paragraph `xml:"TitlePage>Content>Paragraph"`
+	XMLName xml.Name         `xml:"FinalDraft"`
+	Content []*XML_Paragraph `xml:"Content>Paragraph"`
+	Title   []*XML_Paragraph `xml:"TitlePage>Content>Paragraph"`
 
 	// potentially need to look at capturing
 	// the HeaderAndFooter attributes for
 	// more information, such as visibility
 	// and starting pages.
-	Header     []*XML_Paragraph `xml:"HeaderAndFooter>Header>Paragraph"`
-	Footer     []*XML_Paragraph `xml:"HeaderAndFooter>Footer>Paragraph"`
+	Header []*XML_Paragraph `xml:"HeaderAndFooter>Header>Paragraph"`
+	Footer []*XML_Paragraph `xml:"HeaderAndFooter>Footer>Paragraph"`
 }
 
 type XML_Paragraph struct {
@@ -48,14 +69,13 @@ type XML_Paragraph struct {
 
 // we do this because XML is a garbage format designed by
 // criminals, of course, but also because the Go XML parser
-// doesn't support mixed type arrays natively without horrendous
-// interface garbage
+// will only really reflect into interfaces and it's nasty
 
 type XML_Chunk struct {
 	XMLName xml.Name `xml:"Text"`
-	Style   string   `xml:"Style,attr"`  // <Text>         attribute
-	Label   string   `xml:"Type,attr"`   // <DynamicLabel> attribute
-	Text    string   `xml:",chardata"`   // <Text>         content
+	Style   string   `xml:"Style,attr"` // <Text>         attribute
+	Label   string   `xml:"Type,attr"`  // <DynamicLabel> attribute
+	Text    string   `xml:",chardata"`  // <Text>         content
 }
 
 func parse_final_draft_xml(source_file string) (*XML_FinalDraft, bool) {
@@ -70,7 +90,7 @@ func parse_final_draft_xml(source_file string) (*XML_FinalDraft, bool) {
 	// identify them within the struct -- see above
 	byte_stream = bytes.ReplaceAll(byte_stream, []byte("DynamicLabel"), []byte("Text"))
 
-	document := &XML_FinalDraft {}
+	document := &XML_FinalDraft{}
 
 	err = xml.Unmarshal(byte_stream, document)
 
@@ -82,11 +102,11 @@ func parse_final_draft_xml(source_file string) (*XML_FinalDraft, bool) {
 	return document, true
 }
 
-func command_convert_final_draft(config *config) {
+func convert_final_draft(config *config) {
 	data, ok := parse_final_draft_xml(fix_path(config.source_file))
 
 	if !ok {
-		fmt.Fprintln(os.Stderr, "failed to parse Final Draft document")
+		eprintln("failed to parse Final Draft document")
 		return
 	}
 
@@ -97,15 +117,15 @@ func command_convert_final_draft(config *config) {
 	{
 		// because Final Draft title pages are manually placed
 		// we simply assign the "central" items to the "title"
-		// section, and all others to an unused "info" section
+		// section, and all others to the "notes" section
 		// which leaves it compatible with most parsers
-		title_buffer := strings.Builder {}
+		title_buffer := strings.Builder{}
 		title_buffer.Grow(len(data.Title) * 128)
 		title_buffer.WriteString("title:")
 
-		info_buffer := strings.Builder {}
+		info_buffer := strings.Builder{}
 		info_buffer.Grow(len(data.Title) * 128)
-		info_buffer.WriteString("info:")
+		info_buffer.WriteString("notes:")
 
 		for _, paragraph := range data.Title {
 			has_text := false
@@ -142,15 +162,15 @@ func command_convert_final_draft(config *config) {
 						title_buffer.WriteString(strings.TrimSpace(chunk.Text))
 					}
 				}
-				continue
-			}
 
 			// ...otherwise assign to "info"
-			info_buffer.WriteString("\n\t")
+			} else {
+				info_buffer.WriteString("\n\t")
 
-			for _, chunk := range paragraph.Chunks {
-				if chunk.Text != "" {
-					info_buffer.WriteString(strings.TrimSpace(chunk.Text))
+				for _, chunk := range paragraph.Chunks {
+					if chunk.Text != "" {
+						info_buffer.WriteString(strings.TrimSpace(chunk.Text))
+					}
 				}
 			}
 		}
@@ -260,11 +280,9 @@ func command_convert_final_draft(config *config) {
 		}
 	}
 
-	// @todo replace me with standard file writer
-	err := os.WriteFile(fix_path(config.output_file), []byte(buffer.String()), 0777)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write %s\n", config.output_file)
+	ok = write_file(fix_path(config.output_file), []byte(buffer.String()))
+	if !ok {
+		eprintln("failed to write", config.output_file)
 	}
 }
 
@@ -298,7 +316,7 @@ func write_chunks(input []*XML_Chunk, force_uppercase bool) string {
 					opening = opening + x
 					closing = x + closing
 				}
-				// fmt.Println("debug: missed a final draft thing", s)
+				// println("debug: missed a final draft thing", s)
 			}
 		}
 

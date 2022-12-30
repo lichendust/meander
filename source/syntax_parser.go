@@ -1,6 +1,29 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
 
 func get_last_node(nodes []*syntax_node) (*syntax_node, bool) {
 	if len(nodes) > 0 {
@@ -94,7 +117,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 		word := strings.ToLower(text[:n])
 
 		// consume the word and colon
-		text = text[n + 1:]
+		text = text[n+1:]
 
 		if config.revision && first {
 			// because of the need to always skip the diff char
@@ -287,7 +310,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 					level++
 				}
 
-				the_node := &syntax_node {
+				the_node := &syntax_node{
 					node_type: CHARACTER,
 					level:     level,
 					revised:   is_revised,
@@ -336,7 +359,9 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 				n := count_rune(clean_line, '#')
 
 				x := uint8(n) - 1
-				if x > 2 { x = 2 } // clamp sections to 3
+				if x > 2 {
+					x = 2
+				} // clamp sections to 3
 
 				nodes = append(nodes, &syntax_node{
 					node_type: SECTION + x,
@@ -464,7 +489,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 					}
 
 					if template, ok := macro(line, "header"); ok {
-						nodes = append(nodes, &syntax_node {
+						nodes = append(nodes, &syntax_node{
 							node_type: HEADER,
 							raw_text:  template,
 						})
@@ -472,7 +497,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 					}
 
 					if template, ok := macro(line, "footer"); ok {
-						nodes = append(nodes, &syntax_node {
+						nodes = append(nodes, &syntax_node{
 							node_type: FOOTER,
 							raw_text:  template,
 						})
@@ -480,7 +505,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 					}
 
 					if template, ok := macro(line, "pagenumber"); ok {
-						nodes = append(nodes, &syntax_node {
+						nodes = append(nodes, &syntax_node{
 							node_type: PAGE_NUMBER,
 							raw_text:  template,
 						})
@@ -491,9 +516,15 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 					// we don't handle them yet.
 					line = strings.ToLower(line)
 
-					if strings.HasPrefix(line, "toc")       { continue }
-					if strings.HasPrefix(line, "watermark") { continue }
-					if strings.HasPrefix(line, "endnote")   { continue }
+					if strings.HasPrefix(line, "toc") {
+						continue
+					}
+					if strings.HasPrefix(line, "watermark") {
+						continue
+					}
+					if strings.HasPrefix(line, "endnote") {
+						continue
+					}
 
 					// @todo this isn't all of them
 				}
@@ -504,18 +535,18 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 		if is_valid_scene(clean_line) {
 			if scene, scene_number, ok := has_scene_number(clean_line); ok {
 				// insert cleaned scene + number
-				nodes = append(nodes, &syntax_node {
+				nodes = append(nodes, &syntax_node{
 					node_type: SCENE,
 					revised:   is_revised,
 					raw_text:  scene,
 				})
-				nodes = append(nodes, &syntax_node {
+				nodes = append(nodes, &syntax_node{
 					node_type: SCENE_NUMBER,
 					raw_text:  scene_number,
 				})
 			} else {
 				// insert just the whole line scene
-				nodes = append(nodes, &syntax_node {
+				nodes = append(nodes, &syntax_node{
 					node_type: SCENE,
 					revised:   is_revised,
 					raw_text:  clean_line,
@@ -525,12 +556,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 		}
 
 		// transitions
-		if strings.HasSuffix(clean_line, "TO:") && is_all_uppercase(clean_line) {
-			// Fountain demands uppercase letters
-			// for "to:" transitions (and also scenes),
-			// but Highland auto-replaces all-lowercase
-			// matches in the editor, so this isn't
-			// technically a deviation to accept both
+		if is_valid_transition(clean_line) {
 			nodes = append(nodes, &syntax_node{
 				node_type: TRANSITION,
 				revised:   is_revised,
@@ -548,7 +574,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 				level++
 			}
 
-			the_node := &syntax_node {
+			the_node := &syntax_node{
 				node_type: CHARACTER,
 				level:     level,
 				revised:   is_revised,
@@ -581,7 +607,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 				}
 			}
 
-			nodes = append(nodes, &syntax_node {
+			nodes = append(nodes, &syntax_node{
 				node_type: expected_type,
 				revised:   is_revised,
 				raw_text:  dirty_line,
@@ -589,16 +615,16 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 		}
 	}
 
-	syntax_validator(nodes)
+	nodes = syntax_validator(nodes)
 
-	return &fountain_content {
+	return &fountain_content{
 		title: title,
 		nodes: nodes,
 	}, true
 }
 
 // post-parse clean ups and checks
-func syntax_validator(nodes []*syntax_node) {
+func syntax_validator(nodes []*syntax_node) []*syntax_node {
 	if len(nodes) > 0 {
 		// remove leading whitespace on file
 		if nodes[0].node_type == WHITESPACE {
@@ -623,7 +649,7 @@ func syntax_validator(nodes []*syntax_node) {
 			}
 
 			if len(nodes[i:]) > 1 {
-				forward_node := nodes[i + 1]
+				forward_node := nodes[i+1]
 
 				// if two characters are back to back
 				// reset the first one
@@ -645,4 +671,144 @@ func syntax_validator(nodes []*syntax_node) {
 			}
 		}
 	}
+
+	return nodes
+}
+
+func is_valid_scene(line string) bool {
+	word := ""
+
+	for i, c := range line {
+		if c == '.' {
+			word = line[:i]
+			break
+		}
+
+		if c >= utf8.RuneSelf {
+			if unicode.IsSpace(c) {
+				word = line[:i]
+				break
+			}
+			continue
+		}
+
+		if ascii_space[c] == 1 {
+			word = line[:i]
+			break
+		}
+	}
+
+	if len(word) > 0 {
+		return valid_scene[strings.ToLower(clean_string(word))]
+	}
+
+	return false
+}
+
+func is_valid_character(line string) bool {
+	for i, c := range line {
+		if !format_chars[c] {
+			line = line[i:]
+			break
+		}
+	}
+
+	// characters must start with a letter
+	if !unicode.IsLetter(rune(line[0])) {
+		return false
+	}
+
+	has_letters := false
+	first_char := true
+	copy := line
+
+	for len(copy) > 0 {
+		c, rune_width := utf8.DecodeRuneInString(copy)
+
+		if c == '(' && !first_char {
+			for i, c := range copy {
+				if c == ')' {
+					copy = copy[i:]
+					break
+				}
+			}
+		}
+
+		if unicode.IsLetter(c) {
+			has_letters = true
+
+			if !unicode.IsUpper(c) {
+				return false
+			}
+		}
+
+		copy = copy[rune_width:]
+		first_char = false
+	}
+
+	return has_letters
+}
+
+func is_valid_transition(line string) bool {
+	for i := len(line) - 1; i >= 0; i-- {
+		c := line[i]
+		if ascii_space[c] == 1 {
+			return valid_transition[strings.ToLower(line[i+1:])]
+		}
+	}
+	return false
+}
+
+func is_title_element(line string) (string, string, bool) {
+	if !strings.Contains(line, ":") {
+		return "", "", false
+	}
+
+	t := strings.SplitN(line, ":", 2)
+
+	name, value := strings.ToLower(t[0]), t[1]
+
+	if valid_title_page[name] {
+		return name, value, true
+	}
+
+	return "", "", false
+}
+
+func has_scene_number(text string) (string, string, bool) {
+	if text[len(text)-1] == '#' {
+		n := 0
+		t := text[:len(text)-1]
+
+		for i := len(t) - 1; i > 0; i-- {
+			the_rune, _ := utf8.DecodeLastRuneInString(t[:i+1])
+
+			if unicode.IsSpace(the_rune) {
+				break
+			}
+
+			if the_rune == '#' {
+				n = i
+				break
+			}
+		}
+
+		if n != 0 {
+			return strings.TrimSpace(text[:n]), t[n+1:], true
+		}
+	}
+
+	return "", "", false
+}
+
+// quickly discards the title page for included files
+func consume_title_page(input string) string {
+	if n := strings.IndexRune(input, '\n'); n > -1 {
+		if _, _, ok := is_title_element(input[:n]); ok {
+			if n := rune_pair(input, '\n', '\n'); n > -1 {
+				return strings.TrimSpace(input[n:])
+			}
+		}
+	}
+	return input
 }

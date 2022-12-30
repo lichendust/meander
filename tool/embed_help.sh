@@ -7,7 +7,9 @@ set -e
 
 target=source/command_help_text.go
 
-printf "package main" > $target
+printf "$(cat tool/header_license.txt)\n\n" > $target
+
+printf "package main" >> $target
 
 for f in help/*.txt; do
 	name=$(basename ${f%%.txt})

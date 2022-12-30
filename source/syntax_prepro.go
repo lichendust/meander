@@ -1,20 +1,37 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
-	"os"
-	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 	"path/filepath"
 )
 
 var (
-	counter_panel    int
-	counter_figure   int
-	counter_series   int
-	counter_chapter  int
+	counter_panel   int
+	counter_figure  int
+	counter_series  int
+	counter_chapter int
 )
 
 func macro(text, keyword string) (string, bool) {
@@ -57,14 +74,14 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 		}
 
 		if !ok {
-			fmt.Fprintf(os.Stderr, "%q not found\n", filepath.ToSlash(source_file))
+			eprintf("%q not found", filepath.ToSlash(source_file))
 			return "", false
 		}
 	}
 
 	newline_count := 0
 
-	buffer := strings.Builder {}
+	buffer := strings.Builder{}
 	buffer.Grow(len(text))
 
 	last_element_removable := false
@@ -94,7 +111,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 				continue
 			}
 
-			text = text[n + 2:]
+			text = text[n+2:]
 
 			if last_element_removable {
 				newline_count++
@@ -158,7 +175,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 					continue
 				}
 
-				text = text[n + 2:]
+				text = text[n+2:]
 
 				if last_element_removable {
 					newline_count++
@@ -237,16 +254,17 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 					if config.revision {
 						switch child_text[0] {
 						case '\\', '+', '-':
-						default: child_text = " " + child_text
+						default:
+							child_text = " " + child_text
 						}
 					}
 
 					buffer.WriteString(child_text)
 				} else {
-					buffer.WriteString(text[:n + 2])
+					buffer.WriteString(text[:n+2])
 				}
 
-				text = text[n + 2:]
+				text = text[n+2:]
 				newline_count = 0
 				continue
 			}
@@ -257,7 +275,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 				}
 
 				buffer.WriteString(nsdate(template))
-				text = text[n + 2:]
+				text = text[n+2:]
 				continue
 			}
 
@@ -368,7 +386,8 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 	if config.revision {
 		switch text[0] {
 		case '\\', '+', '-':
-		default: text = " " + text
+		default:
+			text = " " + text
 		}
 	}
 

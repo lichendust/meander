@@ -1,8 +1,27 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import "github.com/signintech/gopdf"
 
-var paper_store = map[string]*paper {
+var paper_store = map[string]*paper{
 	"a4": {
 		paper_data: gopdf.PageSizeA4,
 		width:      inch * 8.27,
@@ -17,13 +36,12 @@ var paper_store = map[string]*paper {
 
 // @todo
 const (
-	dual_width = inch * 2.5
-
+	dual_width       = inch * 2.5
 	dual_char_margin = inch / 2
 	dual_para_margin = inch / 2
 )
 
-var template_store = map[string]*template {
+var template_store = map[string]*template{
 	"screenplay": {
 		line_height_title: line_height_title,
 		line_height:       line_height,
@@ -32,7 +50,7 @@ var template_store = map[string]*template {
 
 		allow_dual_dialogue: true,
 
-		look_up: map[uint8]*template_entry {
+		look_up: map[uint8]*template_entry{
 			ACTION: {},
 			SCENE: {
 				casing:      UPPERCASE,
@@ -69,18 +87,18 @@ var template_store = map[string]*template {
 				style: ITALIC,
 			},
 			SECTION: {
-				skip: true,
+				skip:        true,
 				casing:      UPPERCASE,
 				style:       BOLD | UNDERLINE,
 				space_above: pica,
 			},
 			SECTION2: {
-				skip: true,
+				skip:   true,
 				casing: UPPERCASE,
 				style:  BOLD,
 			},
 			SECTION3: {
-				skip: true,
+				skip:  true,
 				style: BOLD,
 			},
 		},
@@ -93,7 +111,7 @@ var template_store = map[string]*template {
 
 		allow_dual_dialogue: true,
 
-		look_up: map[uint8]*template_entry {
+		look_up: map[uint8]*template_entry{
 			ACTION: {
 				margin: inch * 2.5,
 				width:  inch * 3.2,
@@ -132,18 +150,18 @@ var template_store = map[string]*template {
 				style: ITALIC,
 			},
 			SECTION: {
-				skip: true,
+				skip:        true,
 				casing:      UPPERCASE,
 				style:       BOLD | UNDERLINE,
 				space_above: pica,
 			},
 			SECTION2: {
-				skip: true,
+				skip:   true,
 				casing: UPPERCASE,
 				style:  BOLD,
 			},
 			SECTION3: {
-				skip: true,
+				skip:  true,
 				style: BOLD,
 			},
 		},
@@ -156,11 +174,11 @@ var template_store = map[string]*template {
 
 		allow_dual_dialogue: true,
 
-		look_up: map[uint8]*template_entry {
+		look_up: map[uint8]*template_entry{
 			ACTION: {},
 			SCENE: {
 				casing:      UPPERCASE,
-				style:       UNDERLINE, 
+				style:       UNDERLINE,
 				space_above: pica,
 				width:       inch * 5,
 			},
@@ -214,7 +232,7 @@ var template_store = map[string]*template {
 
 		allow_dual_dialogue: false,
 
-		look_up: map[uint8]*template_entry {
+		look_up: map[uint8]*template_entry{
 			ACTION: {
 				para_indent: 4,
 			},
@@ -274,7 +292,7 @@ var template_store = map[string]*template {
 
 		allow_dual_dialogue: true,
 
-		look_up: map[uint8]*template_entry {
+		look_up: map[uint8]*template_entry{
 			ACTION: {},
 			SCENE: {
 				casing:      UPPERCASE,
@@ -310,15 +328,15 @@ var template_store = map[string]*template {
 				style: ITALIC,
 			},
 			SECTION: {
-				style: BOLD | UNDERLINE,
+				style:       BOLD | UNDERLINE,
 				space_above: pica,
 			},
 			SECTION2: {
-				style: UNDERLINE,
+				style:       UNDERLINE,
 				space_above: pica,
 			},
 			SECTION3: {
-				style: ITALIC | UNDERLINE,
+				style:       ITALIC | UNDERLINE,
 				space_above: pica,
 			},
 		},

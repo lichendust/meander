@@ -1,59 +1,31 @@
-//go:build helpers
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+//go:build dev
 
 package main
 
-import (
-	"fmt"
-)
-
-var debug_title_order = []string {
-	"format",
-	"title",
-	"credit",
-	"author",
-	"source",
-	"contact",
-	"revision",
-	"draft date",
-	"notes",
-	"copyright",
-}
-
-func debug_arguments(conf *config) {
-	scene := ""
-
-	switch conf.scenes {
-	case SCENE_INPUT:    scene = "input"
-	case SCENE_REMOVE:   scene = "remove"
-	case SCENE_GENERATE: scene = "generate"
-	}
-
-	fmt.Printf("source: %q\noutput: %q\n\nscenes: %s\nformat: %s\npaper: %s\n",
-		fix_path(conf.source_file),
-		fix_path(conf.output_file),
-
-		scene,
-		conf.template,
-		conf.paper_size,
-	)
-}
-
-var leaf_type_convert = map[int]string{
-	NORMAL:     "<normal>",
-	BOLD:       "<bold>",
-	ITALIC:     "<italic>",
-	BOLDITALIC: "<bold_italic>",
-	UNDERLINE:  "<underline>",
-	STRIKEOUT:  "<strikeout>",
-	HIGHLIGHT:  "<highlight>",
-	NOTE:       "<note>",
-	ESCAPE:     "<escape>",
-	// NEWLINE:    "<newline>",
-}
+import "fmt"
 
 func (f *inline_format) String() string {
-	could_open   := " "
-	could_close  := " "
+	could_open := " "
+	could_close := " "
 	is_confirmed := " "
 
 	if f.leaf_type > NORMAL {
@@ -105,47 +77,43 @@ func (line *syntax_line) String() string {
 	return the_string
 }
 
-/*func (leaf *syntax_leaf) String() string {
-	// leaf_type   uint8
-	// space_width int
-	// text_width  int
-	// opening     bool
-	// space_only  bool
-	// text        string
-
-	if leaf.leaf_type == NORMAL {
-		return leaf.text
-	}
-	return leaf_type_convert[leaf.leaf_type]
-}*/
-
-/*func debug_formatting(input string, max_width int) {
-	list, _ := syntax_leaf_parser(input, max_width, 0)
-
-	fmt.Printf("\n%q\n\"", input)
-
-	for _, entry := range list {
-		fmt.Printf(strings.Repeat(" ", entry.space_width))
-
-		if entry.leaf_type == NORMAL {
-			fmt.Printf(entry.text)
-		}
-	}
-
-	fmt.Printf("\"\n\n")
-
-	for _, entry := range list {
-		fmt.Printf("    %s\n", entry)
-	}
-
-	fmt.Println()
-}*/
+var leaf_type_convert = map[int]string{
+	NORMAL:     "<normal>",
+	BOLD:       "<bold>",
+	ITALIC:     "<italic>",
+	BOLDITALIC: "<bold_italic>",
+	UNDERLINE:  "<underline>",
+	STRIKEOUT:  "<strikeout>",
+	HIGHLIGHT:  "<highlight>",
+	NOTE:       "<note>",
+	ESCAPE:     "<escape>",
+	// NEWLINE:    "<newline>",
+}
 
 func debug_title_page(title map[string]string) {
 	for _, c := range debug_title_order {
 		if x, ok := title[c]; ok {
 			fmt.Printf("%s\n%s\n\n", c, x)
 		}
+	}
+}
+
+var debug_title_order = []string{
+	"format",
+	"title",
+	"credit",
+	"author",
+	"source",
+	"contact",
+	"revision",
+	"draft date",
+	"notes",
+	"copyright",
+}
+
+func debug_print_screenplay(content *fountain_content) {
+	for _, node := range content.nodes {
+		fmt.Println(node)
 	}
 }
 
@@ -164,10 +132,4 @@ func (node *syntax_node) String() string {
 	}
 
 	return fmt.Sprintf("%-15s%-4d|%s", kind, node.level, node.raw_text)
-}
-
-func debug_print_screenplay(content *fountain_content) {
-	for _, node := range content.nodes {
-		fmt.Println(node)
-	}
 }

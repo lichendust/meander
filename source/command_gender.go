@@ -1,7 +1,25 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
-	"os"
 	"io"
 	"fmt"
 	"math"
@@ -39,7 +57,7 @@ func command_gender_analysis(config *config) {
 	// update the table in the source file
 	if has_updated && config.write_gender {
 		if ok := gender_replace_comment(config, data); !ok {
-			fmt.Fprintf(os.Stderr, "failed to replace gender table!")
+			eprintln("failed to replace gender table!")
 			return
 		}
 	}
@@ -57,10 +75,13 @@ func command_gender_analysis(config *config) {
 	*/
 
 	if running_in_term {
-		fmt.Println()
+		newline()
 	}
 
 	{
+		const gender_title     = " Gender Analysis"
+		const gender_title_len = len(gender_title)
+
 		title, ok := content.title["title"]
 
 		if ok {
@@ -69,32 +90,30 @@ func command_gender_analysis(config *config) {
 			title = config.source_file
 		}
 
-		title = fmt.Sprintf("%q Gender Analysis", title)
-
 		{
 			if running_in_term {
-				fmt.Printf(ansi_color_accent)
+				print(ansi_color_accent)
 			}
 
-			fmt.Println(title)
+			print(title); println(gender_title)
 
 			if running_in_term {
-				fmt.Print(ansi_color_reset)
+				print(ansi_color_reset)
 			}
 		}
 
-		fmt.Println(strings.Repeat("-", count_all_runes(title)))
-		fmt.Println()
+		println(strings.Repeat("-", count_all_runes(title) + gender_title_len))
+		newline()
 	}
 
 	print_data(crunch_chars_by_gender(data), "Character Count by Gender")
-	fmt.Println()
+	newline()
 	print_data(crunch_lines_by_gender(data), "Lines by Gender")
-	fmt.Println()
+	newline()
 	print_data(crunch_chars_by_lines(data), "Characters by Lines Spoken")
 
 	if running_in_term {
-		fmt.Println()
+		newline()
 	}
 }
 
@@ -180,7 +199,7 @@ func do_full_analysis(config *config) (*fountain_content, *Gender_Data, bool, bo
 		}
 
 		if !has_any_character {
-			fmt.Fprintln(os.Stderr, "gender: no character data to display!")
+			eprintln("gender: no character data to display!")
 			return nil, nil, false, false
 		}
 	}
@@ -192,7 +211,7 @@ func gender_table_parser(config *config) (*Gender_Data, bool) {
 	text, ok := load_file(fix_path(config.source_file))
 
 	if !ok {
-		fmt.Fprintf(os.Stderr, "gender: failed to load %q\n", config.source_file)
+		eprintln("gender: failed to load", config.source_file)
 		return nil, false
 	}
 
@@ -230,7 +249,7 @@ func gender_table_parser(config *config) (*Gender_Data, bool) {
 					break
 				}
 			} else {
-				fmt.Fprintln(os.Stderr, "gender: error reading comment string")
+				eprintln("gender: error reading comment string")
 				return nil, false
 			}
 		}
@@ -243,14 +262,14 @@ func gender_table_parser(config *config) (*Gender_Data, bool) {
 
 		if line[0] == '[' {
 			if line[len(line) - 1] != ']' {
-				fmt.Fprintf(os.Stderr, "malformed gender heading %q\n", line)
+				eprintln("malformed gender heading", line)
 				return nil, false
 			}
 
 			inner_line := strings.ToLower(strings.TrimSpace(line[1:len(line) - 1]))
 
 			if !strings.HasPrefix(inner_line, "gender.") {
-				fmt.Fprintf(os.Stderr, "expected \"[gender.<term>]\" instead of %q\n", line)
+				eprintln("expected \"[gender.<term>]\" instead of", line)
 				return nil, false
 			}
 
@@ -306,7 +325,7 @@ func gender_table_parser(config *config) (*Gender_Data, bool) {
 
 	if text == "" {
 		// @todo add write confirmation
-		fmt.Fprintf(os.Stderr, "gender: no table found in %q\n", config.source_file)
+		eprintln("gender: no table found in", config.source_file)
 		return nil, false
 	}
 
@@ -362,13 +381,13 @@ func (oc data_order) Swap(i, j int) {
 
 func print_data(data *data_container, title string) {
 	if running_in_term {
-		fmt.Printf(ansi_color_accent)
+		print(ansi_color_accent)
 	}
 
-	fmt.Println(title)
+	println(title)
 
 	if running_in_term {
-		fmt.Print(ansi_color_reset)
+		print(ansi_color_reset)
 	}
 
 	offset := 39
@@ -377,40 +396,40 @@ func print_data(data *data_container, title string) {
 		offset += 2
 	}
 
-	fmt.Println(strings.Repeat("-", data.longest_name_one + data.longest_name_two + offset))
+	println(strings.Repeat("-", data.longest_name_one + data.longest_name_two + offset))
 
 	for _, entry := range data.ordered_data {
 		if entry.value == 0 {
 			continue
 		}
 
-		fmt.Print(space_pad_string(title_case(entry.name_one), data.longest_name_one))
+		print(space_pad_string(title_case(entry.name_one), data.longest_name_one))
 
 		if data.longest_name_two > 0 {
-			fmt.Print(space_pad_string(title_case(entry.name_two), data.longest_name_two))
+			print(space_pad_string(title_case(entry.name_two), data.longest_name_two))
 		}
 
-		fmt.Print(space_pad_string(fmt.Sprintf("%d", entry.value), 5))
+		print(space_pad_string(fmt.Sprintf("%d", entry.value), 5))
 
 		{
 			percentage := float64(entry.value) / float64(data.total_value) * 100
-			fmt.Print(space_pad_string(fmt.Sprintf("%.1f%%", percentage), 8))
+			print(space_pad_string(fmt.Sprintf("%.1f%%", percentage), 8))
 		}
 
 		if running_in_term {
-			fmt.Printf(ansi_color_accent)
+			print(ansi_color_accent)
 		}
 
 		{
 			bar_graph := normalise(entry.value, data.largest_value, 20)
-			fmt.Print(strings.Repeat("▪", bar_graph))
+			print(strings.Repeat("▪", bar_graph))
 		}
 
 		if running_in_term {
-			fmt.Print(ansi_color_reset)
+			print(ansi_color_reset)
 		}
 
-		fmt.Println()
+		newline()
 	}
 }
 
@@ -634,13 +653,7 @@ func gender_replace_comment(config *config, the_comment *Gender_Data) bool {
 	buffer.WriteString(input)
 	buffer.WriteString(copy[ending_byte:])
 
-	err := os.WriteFile(filepath, []byte(buffer.String()), 0777)
-
-	if err != nil {
-		return false
-	}
-
-	return true
+	return write_file(filepath, []byte(buffer.String()))
 }
 
 func normalise(value, largest, max int) int {

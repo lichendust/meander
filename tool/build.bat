@@ -6,16 +6,13 @@ set build_dir=build
 echo [building]
 
 call :build windows amd64 ".exe" || exit /B
-
-call :build linux amd64          || exit /B
-call :build linux arm64          || exit /B
-
-call :build darwin amd64         || exit /B
-call :build darwin arm64         || exit /B
-
-call :build freebsd amd64 || exit /B
-call :build netbsd  amd64 || exit /B
-call :build openbsd amd64 || exit /B
+call :build linux   amd64        || exit /B
+call :build linux   arm64        || exit /B
+call :build darwin  amd64        || exit /B
+call :build darwin  arm64        || exit /B
+call :build freebsd amd64        || exit /B
+call :build netbsd  amd64        || exit /B
+call :build openbsd amd64        || exit /B
 
 exit /B 0
 

@@ -1,0 +1,111 @@
+Data generates a JSON file containing the content of and some additional information about a given Fountain file.
+
+Rather than conversion to other screenplay tools, this is intended for use with non-screenplay software, such as furnishing production-tracking tools with screenplay metadata or dumping statistics into spreadsheets.
+
+$1Usage$0
+-----
+
+    meander $1data$0 input_file [output] [--flags]
+
+$1Flags$0
+-----
+
+    $1--preserve-markdown$0
+
+    by default, the export will strip *italic*,
+    +highlight+, etc. Markdown formatting characters.
+
+    $1--revision$0
+
+    if revision mode is enabled, a $1revised$0
+    value can reflect in the content entries.
+
+The resulting JSON blob is a dictionary containing four entries:
+
+    + $1meta$0
+    + $1title$0
+    + $1characters$0
+    + $1content$0
+
+$1Meta$0
+----
+
+Meta stores information about the JSON format itself — the version of Meander that created it and the version of the format and its structures.
+
+$1Title$0
+-----
+
+Title is a simple dictionary of the title page information.  Keys are also sanitised: a key such as $1draft date$0 will become $1draft_date$0.
+
+    "title": {
+        "title": "An Movie",
+        "credit": "by",
+        "author": "Some Nerd",
+        "draft_date": "December 2022"
+    }
+
+$1Characters$0
+----------
+
+Characters is a list of all speaking characters featured in the screenplay with alternate names, gender information and line-count based on the gender definition table.
+
+    "characters": [
+        {
+            "name": "Ashby",
+            "other_names": [
+                "Captain Ashby",
+            ],
+            "gender": "male",
+            "lines_spoken": 168
+        },
+        {
+            "name": "Rosemary",
+            "gender": "female",
+            "lines_spoken": 220
+        }
+    ]
+
+$1Content$0
+-------
+
+Content is a list of all screenplay content, tagged by type.
+
+    "content": [
+        {
+            "type": "scene",
+            "text": "EXT. PORCH - SUNSET",
+            "scene_number": "99-A"
+        },
+        {
+            "type": "action",
+            "text": "Our heroes watch the sunset..."
+        },
+        {
+            "type": "dialogue",
+            "name": "NARRATOR",
+            "dialogue": [
+                "Will they find peace?",
+                "(beat)",
+                "Who can say..."
+            ]
+        },
+        {
+            "type": "page_break"
+        }
+    ]
+
+If run with the revision mode flag, any given entry in the data may additionally contain a $1"revised": true$0 value.
+
+The type table is as follows:
+
+    scene
+    dialogue
+    action
+    centered
+    transition
+    section
+    synopsis
+    header
+    footer
+    page_break
+    page_number

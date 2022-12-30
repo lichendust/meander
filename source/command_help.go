@@ -1,60 +1,63 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
 	"os"
-	"fmt"
 	"strings"
-	"github.com/mattn/go-isatty"
 )
 
-var running_in_term = false
-
-func init() {
-	running_in_term = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
-}
-
 func command_help() {
-	defer fmt.Println() // trailing newline
+	println(title)
 
 	args := os.Args[2:]
 
 	if len(args) == 0 {
-		fmt.Println(apply_color(comm_help))
+		println(apply_color(comm_help))
+		newline()
 		return
 	}
 
 	switch strings.ToLower(args[0]) {
 	case "fountain":
-		fmt.Println(apply_color(comm_fountain))
+		println(apply_color(comm_fountain))
+		newline()
 
 	case "render":
-		fmt.Println(apply_color(comm_render))
+		println(apply_color(comm_render))
+		newline()
 
 	case "merge":
-		fmt.Println(apply_color(comm_merge))
+		println(apply_color(comm_merge))
+		newline()
 
 	case "gender":
-		fmt.Println(apply_color(comm_gender))
+		println(apply_color(comm_gender))
+		newline()
+
+	case "data":
+		println(apply_color(comm_data))
+		newline()
 
 	case "convert":
-		fmt.Println(apply_color(comm_convert))
+		println(apply_color(comm_convert))
+		newline()
 	}
-}
-
-const ansi_color_reset  = "\033[0m"
-const ansi_color_accent = "\033[92m"
-
-func apply_color(input string) string {
-	if running_in_term {
-		input = strings.ReplaceAll(input, "$0", ansi_color_reset)
-		input = strings.ReplaceAll(input, "$1", ansi_color_accent)
-		return input
-	}
-	return strip_color(input)
-}
-
-func strip_color(input string) string {
-	input = strings.ReplaceAll(input, "$0", "")
-	input = strings.ReplaceAll(input, "$1", "")
-	return input
 }

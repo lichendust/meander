@@ -22,7 +22,7 @@ $1Commands$0
     $1render$0    render input file to PDF (default)
     $1gender$0    display gender analysis statistics
     $1merge$0     merge a multi-file document
-    $1convert$0   (experimental) convert Final Draft files
+    $1convert$0   (experimental) convert from other software
     $1help$0      print this message and others
 
 $1Help$0

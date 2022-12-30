@@ -1,5 +1,3 @@
-*Unless otherwise stated, all scripts and tools in this directory are licensed under the [MIT License](https://mit-license.org) and are **not** subject to the GPL 3.0 license of the Meander codebase.  This is to ensure these build scripts can be used in other projects under different licenses without introducing what I like to call "legal creep".*
-
 # Build Tools
 
 All of Meander's build tools are in this directory.  There aren't many and they're mostly time-savers rather than direct necessities.

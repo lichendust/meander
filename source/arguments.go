@@ -1,8 +1,26 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
 	"os"
-	"fmt"
 	"strings"
 )
 
@@ -23,6 +41,16 @@ const (
 	SCENE_GENERATE              // create new numbers
 )
 
+// defaults
+const (
+	// always all lowercase
+	default_template = "screenplay"
+	default_paper    = "a4"
+
+	fountain_extension = ".fountain"
+	fountain_short_ext = ".ftn"
+)
+
 // config is the central location for all
 // user input
 type config struct {
@@ -32,11 +60,12 @@ type config struct {
 	template   string
 	paper_size string
 
-	include_notes    bool
-	include_synopses bool
-	include_sections bool
-	write_gender     bool
-	include_gender   bool
+	include_notes        bool
+	include_synopses     bool
+	include_sections     bool
+	write_gender         bool
+	include_gender       bool
+	json_keep_formatting bool
 
 	revision     bool
 	revision_tag string
@@ -143,10 +172,12 @@ func get_arguments() (*config, bool) {
 
 		counter ++
 
-		switch a {
-		case "":
-			break
+		if a == "" {
+			patharg++
+			continue
+		}
 
+		switch a {
 		case "revision", "r":
 			conf.revision = true
 
@@ -166,6 +197,10 @@ func get_arguments() (*config, bool) {
 			// to try "--help" or "-h" first
 			conf.command = COMMAND_HELP
 			return conf, true
+
+		case "preserve-markdown":
+			conf.json_keep_formatting = true // @docs
+			continue
 
 		case "notes":
 			conf.include_notes = true
@@ -192,11 +227,11 @@ func get_arguments() (*config, bool) {
 				if x, ok := arg_scene_type[b]; ok {
 					conf.scenes = x
 				} else {
-					fmt.Fprintf(os.Stderr, "invalid scene flag: %q\n", b)
+					eprintf("invalid scene flag: %q", b)
 				}
 				counter ++
 			} else {
-				fmt.Fprintln(os.Stderr, "args: missing scene mode")
+				eprintln("args: missing scene mode")
 				has_errors = true
 			}
 			continue
@@ -207,12 +242,12 @@ func get_arguments() (*config, bool) {
 				counter ++
 
 				if _, ok := template_store[b]; !ok {
-					fmt.Fprintf(os.Stderr, "args: %q not a template\n", b)
+					eprintf("args: %q not a template", b)
 					has_errors = true
 				}
 
 			} else {
-				fmt.Fprintln(os.Stderr, "args: missing format")
+				eprintln("args: missing format")
 				has_errors = true
 			}
 			continue
@@ -225,17 +260,17 @@ func get_arguments() (*config, bool) {
 				counter ++
 
 				if _, ok := paper_store[b]; !ok {
-					fmt.Fprintf(os.Stderr, "args: %q is not a supported paper size\n", b)
+					eprintf("args: %q is not a supported paper size", b)
 					has_errors = true
 				}
 			} else {
-				fmt.Fprintln(os.Stderr, "args: missing paper size")
+				eprintln("args: missing paper size")
 				has_errors = true
 			}
 			continue
 
 		default:
-			fmt.Fprintf(os.Stderr, "args: %q flag is unknown\n", a)
+			eprintf("args: %q flag is unknown", a)
 			has_errors = true
 
 			if b != "" {
@@ -249,7 +284,7 @@ func get_arguments() (*config, bool) {
 		case 1:
 			conf.output_file = args[0]
 		default:
-			fmt.Fprintln(os.Stderr, "args: too many path arguments")
+			eprintln("args: too many path arguments")
 			has_errors = true
 		}
 
@@ -260,7 +295,7 @@ func get_arguments() (*config, bool) {
 		if x := find_default_file(); x != "" {
 			conf.source_file = x
 		} else {
-			fmt.Fprintln(os.Stderr, "args: no input file specified or detected!")
+			eprintln("args: no input file specified or detected!")
 			has_errors = true
 		}
 	}
@@ -271,10 +306,10 @@ func get_arguments() (*config, bool) {
 			conf.output_file = rewrite_ext(conf.source_file, ".pdf")
 
 		case COMMAND_MERGE:
-			conf.output_file = rewrite_ext(conf.source_file, "_merged.pdf")
+			conf.output_file = rewrite_ext(conf.source_file, "_merged.fountain")
 
 		case COMMAND_CONVERT:
-			conf.output_file = rewrite_ext(conf.source_file, ".fountain")
+			conf.output_file = rewrite_ext(conf.source_file, fountain_extension)
 
 		case COMMAND_JSON:
 			conf.output_file = rewrite_ext(conf.source_file, ".json")

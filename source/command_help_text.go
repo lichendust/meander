@@ -1,3 +1,22 @@
+/*
+    Meander
+    A portable Fountain utility for production writing
+    Copyright (C) 2022-2023 Harley Denham
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 const comm_convert = `
@@ -18,6 +37,130 @@ $1Supported Formats$0
 
 Meander will check the input file extension to ensure the file 
 can be handled.  This cannot be forced.`
+
+const comm_data = `
+Data generates a JSON file containing the content of and some 
+additional information about a given Fountain file.
+
+Rather than conversion to other screenplay tools, this is 
+intended for use with non-screenplay software, such as 
+furnishing production-tracking tools with screenplay metadata 
+or dumping statistics into spreadsheets.
+
+$1Usage$0
+-----
+
+    meander $1data$0 input_file [output] [--flags]
+
+$1Flags$0
+-----
+
+    $1--preserve-markdown$0
+
+    by default, the export will strip *italic*,
+    +highlight+, etc. Markdown formatting characters.
+
+    $1--revision$0
+
+    if revision mode is enabled, a $1revised$0
+    value can reflect in the content entries.
+
+The resulting JSON blob is a dictionary containing four entries:
+
+    + $1meta$0
+    + $1title$0
+    + $1characters$0
+    + $1content$0
+
+$1Meta$0
+----
+
+Meta stores information about the JSON format itself — the 
+version of Meander that created it and the version of the 
+format and its structures.
+
+$1Title$0
+-----
+
+Title is a simple dictionary of the title page information.  
+Keys are also sanitised: a key such as $1draft date$0 will 
+become $1draft_date$0.
+
+    "title": {
+        "title": "An Movie",
+        "credit": "by",
+        "author": "Some Nerd",
+        "draft_date": "December 2022"
+    }
+
+$1Characters$0
+----------
+
+Characters is a list of all speaking characters featured in the 
+screenplay with alternate names, gender information and 
+line-count based on the gender definition table.
+
+    "characters": [
+        {
+            "name": "Ashby",
+            "other_names": [
+                "Captain Ashby",
+            ],
+            "gender": "male",
+            "lines_spoken": 168
+        },
+        {
+            "name": "Rosemary",
+            "gender": "female",
+            "lines_spoken": 220
+        }
+    ]
+
+$1Content$0
+-------
+
+Content is a list of all screenplay content, tagged by type.
+
+    "content": [
+        {
+            "type": "scene",
+            "text": "EXT. PORCH - SUNSET",
+            "scene_number": "99-A"
+        },
+        {
+            "type": "action",
+            "text": "Our heroes watch the sunset..."
+        },
+        {
+            "type": "dialogue",
+            "name": "NARRATOR",
+            "dialogue": [
+                "Will they find peace?",
+                "(beat)",
+                "Who can say..."
+            ]
+        },
+        {
+            "type": "page_break"
+        }
+    ]
+
+If run with the revision mode flag, any given entry in the data 
+may additionally contain a $1"revised": true$0 value.
+
+The type table is as follows:
+
+    scene
+    dialogue
+    action
+    centered
+    transition
+    section
+    synopsis
+    header
+    footer
+    page_break
+    page_number`
 
 const comm_fountain = `
 $1Fountain Cheat Sheet$0
@@ -497,7 +640,7 @@ $1Commands$0
     $1render$0    render input file to PDF (default)
     $1gender$0    display gender analysis statistics
     $1merge$0     merge a multi-file document
-    $1convert$0   (experimental) convert Final Draft files
+    $1convert$0   (experimental) convert from other software
     $1help$0      print this message and others
 
 $1Help$0
@@ -547,7 +690,7 @@ const comm_render = `
 Render will take a Fountain file and convert it to a fully 
 formatted PDF document.
 
-$1Usage$0
+$1Render Usage$0
 -----
 
     meander $1render$0 [input.fountain] [output.pdf] [--flags]

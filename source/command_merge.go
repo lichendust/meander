@@ -1,25 +1,39 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
-	"os"
-	"fmt"
 	"strings"
 	"unicode/utf8"
 )
 
 func command_merge_document(config *config) {
 	merged_file, ok := merge(config.source_file)
-
 	if !ok {
-		fmt.Fprintf(os.Stderr, "failed to merge file %s\n", config.source_file)
+		eprintln("failed to merge file", config.source_file)
 		return
 	}
 
-	// @todo replace me with standard file writer
-	err := os.WriteFile(fix_path(config.output_file), []byte(merged_file), 0777)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write %s\n", config.output_file)
+	ok = write_file(fix_path(config.output_file), []byte(merged_file))
+	if !ok {
+		eprintln("failed to write", config.output_file)
 	}
 }
 
@@ -27,7 +41,7 @@ func merge(source_file string) (string, bool) {
 	text, ok := load_file(fix_path(source_file))
 
 	if !ok {
-		fmt.Fprintf(os.Stderr, "%q not found\n", source_file)
+		eprintf("%q not found", source_file)
 		return "", false
 	}
 

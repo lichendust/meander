@@ -1,11 +1,29 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
-	"os"
 	"fmt"
 	"time"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/signintech/gopdf"
 )
@@ -95,7 +113,7 @@ func command_render_document(config *config) {
 			}
 
 			if _, ok := template_store[config.template]; !ok {
-				fmt.Fprintf(os.Stderr, "title page: %q not a template\n", config.template)
+				eprintf("title page: %q not a template", config.template)
 				return
 			}
 		}
@@ -108,7 +126,7 @@ func command_render_document(config *config) {
 			}
 
 			if _, ok := paper_store[config.paper_size]; !ok {
-				fmt.Fprintf(os.Stderr, "title page: %q not a supported paper size\n", config.paper_size)
+				eprintf("title page: %q not a supported paper size", config.paper_size)
 				return
 			}
 		}
@@ -160,14 +178,14 @@ func command_render_document(config *config) {
 
 	// write the file to disk and go home
 	if err := document.WritePdf(fix_path(config.output_file)); err != nil {
-		fmt.Fprintf(os.Stderr, "error saving %s", config.output_file)
+		eprintln("error saving", config.output_file)
 	}
 }
 
 func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_content) {
 	has_any := false
 
-	for _, c := range []string{"title", "credit", "author", "source", "notes", "copyright", "contact", "revision", "draft date"} {
+	for _, c := range []string{"title", "credit", "author", "source", "notes", "copyright", "contact", "revision", "draft date", "draft_date"} {
 		if _, ok := content.title[c]; ok {
 			has_any = true
 			break
@@ -181,10 +199,10 @@ func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_
 	document.AddPage()
 
 	// get a bunch of the data we need in advance
-	title       := content.title
+	title := content.title
 
-	template    := template_store[config.template]
-	paper       := paper_store[config.paper_size]
+	template := template_store[config.template]
+	paper := paper_store[config.paper_size]
 
 	main_title_align := template.title_page_align
 
@@ -193,7 +211,7 @@ func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_
 	// we curate all the title page
 	// positions, because clearly we know
 	// best.
-	pos_y := margin_top + pica * 15
+	pos_y := margin_top + pica*15
 
 	main_align_pos := float64(0)
 
@@ -244,7 +262,7 @@ func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_
 		if t, ok := title[c]; ok {
 			lines := strings.Split(t, "\n")
 
-			pos_y -= line_height * float64(len(lines) - 1)
+			pos_y -= line_height * float64(len(lines)-1)
 
 			local_y := pos_y
 
@@ -265,11 +283,11 @@ func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_
 	// bottom right of page
 	pos_y = paper.height - margin_bottom
 
-	for _, c := range []string{"revision", "draft date"} {
+	for _, c := range []string{"revision", "draft date", "draft_date"} {
 		if t, ok := title[c]; ok {
 			lines := strings.Split(t, "\n")
 
-			pos_y -= line_height * float64(len(lines) - 1)
+			pos_y -= line_height * float64(len(lines)-1)
 
 			local_y := pos_y
 
@@ -279,7 +297,7 @@ func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_
 					continue
 				}
 
-				draw_text(document, syntax_leaf_parser(t, 500, 0)[0], paper.width - inch, local_y, RIGHT, &line_data{})
+				draw_text(document, syntax_leaf_parser(t, 500, 0)[0], paper.width-inch, local_y, RIGHT, &line_data{})
 				local_y += line_height
 			}
 
@@ -297,17 +315,16 @@ type renderer struct {
 	page_center_line float64
 	page_max_width   int
 
-	scene_counter  int
-	page_counter   int
-	first_on_page  bool
+	scene_counter int
+	page_counter  int
+	first_on_page bool
+
+	last_char *syntax_line // last character, not string char
+	template  *template
+	paper     *paper
 
 	current_header string
 	current_footer string
-
-	last_char *syntax_line
-
-	template *template
-	paper    *paper
 }
 
 func format_header(manager *renderer, content *fountain_content, input string) string {
@@ -327,24 +344,24 @@ func draw_header(document *gopdf.GoPdf, manager *renderer, text string, height f
 		list[i] = strings.TrimSpace(text)
 	}
 
-	left   := ""
+	left := ""
 	center := ""
-	right  := ""
+	right := ""
 
 	switch len(list) {
 	case 1:
-		right  = list[0]
+		right = list[0]
 	case 2:
-		left   = list[0]
-		right  = list[1]
+		left = list[0]
+		right = list[1]
 	case 3:
-		left   = list[0]
+		left = list[0]
 		center = list[1]
-		right  = list[2]
+		right = list[2]
 	}
 
 	if right != "" {
-		draw_text(document, syntax_leaf_parser(right, 500, 0)[0], manager.paper.width - margin_right, height, RIGHT, &line_data{})
+		draw_text(document, syntax_leaf_parser(right, 500, 0)[0], manager.paper.width-margin_right, height, RIGHT, &line_data{})
 	}
 	if center != "" {
 		draw_text(document, syntax_leaf_parser(center, 500, 0)[0], manager.page_center_line, height, CENTER, &line_data{})
@@ -362,7 +379,7 @@ func new_page(document *gopdf.GoPdf, manager *renderer, header, footer string) {
 	manager.page_counter++
 
 	draw_header(document, manager, header, header_height)
-	draw_header(document, manager, footer, manager.paper.height - footer_height)
+	draw_header(document, manager, footer, manager.paper.height-footer_height)
 }
 
 func print_more(document *gopdf.GoPdf, manager *renderer) {
@@ -376,7 +393,7 @@ func print_more(document *gopdf.GoPdf, manager *renderer) {
 func print_cont(document *gopdf.GoPdf, manager *renderer) {
 	c_indent := manager.template.look_up[CHARACTER].margin
 
-	draw_text(document, manager.last_char, margin_left + c_indent, manager.pos_y, LEFT, &line_data{})
+	draw_text(document, manager.last_char, margin_left+c_indent, manager.pos_y, LEFT, &line_data{})
 
 	// this is a really sketchy method of
 	// checking so as not to dupe
@@ -397,29 +414,29 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 	nodes := content.nodes
 
 	template := template_store[config.template]
-	paper    := paper_store[config.paper_size]
+	paper := paper_store[config.paper_size]
 
 	if config.include_synopses {
 		template.look_up[SYNOPSIS].skip = false
 	}
 	if config.include_sections {
-		template.look_up[SECTION].skip  = false
+		template.look_up[SECTION].skip = false
 		template.look_up[SECTION2].skip = false
 		template.look_up[SECTION3].skip = false
 	}
 
 	manager := &renderer{
-		safe_height:      paper.height - margin_bottom,
+		safe_height: paper.height - margin_bottom,
 
-		page_center_line: paper.width / 2 + margin_left / 2 - margin_right / 2,
+		page_center_line: paper.width/2 + margin_left/2 - margin_right/2,
 		page_max_width:   int((paper.width - margin_right - margin_left) / char_width),
 
-		page_counter:     1,
-		current_header:   "%p.",
-		first_on_page:    true,
+		page_counter:   1,
+		current_header: "%p.",
+		first_on_page:  true,
 
-		template:         template,
-		paper:            paper,
+		template: template,
+		paper:    paper,
 	}
 
 	{
@@ -438,8 +455,10 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 				the_style = t.style
 
 				switch t.casing {
-				case UPPERCASE: the_node.raw_text = strings.ToUpper(the_node.raw_text)
-				case LOWERCASE: the_node.raw_text = strings.ToLower(the_node.raw_text)
+				case UPPERCASE:
+					the_node.raw_text = strings.ToUpper(the_node.raw_text)
+				case LOWERCASE:
+					the_node.raw_text = strings.ToLower(the_node.raw_text)
 				}
 
 				if t.para_indent > 0 {
@@ -461,8 +480,10 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 			if inside_dual_dialogue {
 				switch the_node.node_type {
-				case PARENTHETICAL:   the_width = int((dual_width - dual_para_margin) / char_width)
-				case DIALOGUE, LYRIC: the_width = int(dual_width / char_width)
+				case PARENTHETICAL:
+					the_width = int((dual_width - dual_para_margin) / char_width)
+				case DIALOGUE, LYRIC:
+					the_width = int(dual_width / char_width)
 				}
 			}
 
@@ -523,7 +544,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 			manager.current_footer = t
 			t = format_header(manager, content, t)
-			draw_header(document, manager, t, paper.height - footer_height)
+			draw_header(document, manager, t, paper.height-footer_height)
 
 			nodes = consume_node_whitespace(nodes[1:])
 			continue
@@ -600,7 +621,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			// remaining page. we just don't split dual
 			// dialogue because we can't walk back through the
 			// PDF buffer
-			if manager.pos_y + highest > manager.safe_height {
+			if manager.pos_y+highest > manager.safe_height {
 				header := format_header(manager, content, manager.current_header)
 				footer := format_header(manager, content, manager.current_footer)
 
@@ -611,7 +632,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 				draw_character_block(document, left, margin_left, manager.pos_y, template.line_height)
 				manager.pos_y = starting_pos_y
 
-				draw_character_block(document, right, margin_left + inch * 3, manager.pos_y, template.line_height)
+				draw_character_block(document, right, margin_left+inch*3, manager.pos_y, template.line_height)
 				manager.pos_y = starting_pos_y + highest
 			}
 			continue
@@ -619,8 +640,8 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 		// do all that templating stuff!
 		inside_char := is_character_train(node.node_type)
-		justify     := LEFT
-		style       := NORMAL
+		justify := LEFT
+		style := NORMAL
 		line_height := template.line_height
 
 		if node.template != nil {
@@ -634,13 +655,16 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 				continue
 			}
 
-			style   = t.style
+			style = t.style
 			justify = t.justify
 
 			switch justify {
-			case LEFT:   manager.pos_x = margin_left + t.margin
-			case RIGHT:  manager.pos_x = paper.width - margin_right - t.margin + char_width
-			case CENTER: manager.pos_x = manager.page_center_line
+			case LEFT:
+				manager.pos_x = margin_left + t.margin
+			case RIGHT:
+				manager.pos_x = paper.width - margin_right - t.margin + char_width
+			case CENTER:
+				manager.pos_x = manager.page_center_line
 			}
 
 			// some entries can have an extra pad near them
@@ -661,12 +685,12 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 			switch node.node_type {
 			case PARENTHETICAL:
-				if manager.pos_y + line_height > manager.safe_height {
+				if manager.pos_y+line_height > manager.safe_height {
 					do_new_page = true
 				}
 
 			case SCENE, SECTION, CHARACTER:
-				if manager.pos_y + line_height * 3 > manager.safe_height {
+				if manager.pos_y+line_height*3 > manager.safe_height {
 					do_new_page = true
 				}
 			}
@@ -703,10 +727,10 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 				plate := template.look_up[SCENE]
 
-				if plate.style & BOLD != 0 {
+				if plate.style&BOLD != 0 {
 					font_setter += "B"
 				}
-				if plate.style & ITALIC != 0 {
+				if plate.style&ITALIC != 0 {
 					font_setter += "I"
 				}
 
@@ -723,17 +747,17 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 		{
 			lines := node.lines
 
-			data := line_data {
-				is_bold:      style & BOLD != 0,
-				is_italic:    style & ITALIC != 0,
-				active_color: print_color {0, 0, 0},
-				base_color:   print_color {0, 0, 0},
+			data := line_data{
+				is_bold:      style&BOLD != 0,
+				is_italic:    style&ITALIC != 0,
+				active_color: print_color{0, 0, 0},
+				base_color:   print_color{0, 0, 0},
 			}
 
 			// immediate page overflow before writing
 			// based on wrapped block height, if necessary
 			if len(lines) >= 2 {
-				if manager.pos_y + line_height * 2 > manager.safe_height {
+				if manager.pos_y+line_height*2 > manager.safe_height {
 					header := format_header(manager, content, manager.current_header)
 					footer := format_header(manager, content, manager.current_footer)
 
@@ -742,12 +766,12 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			}
 
 			switch node.node_type {
-				case SYNOPSIS:
-					data.base_color   = print_color {100, 100, 100} // @color hardcoded
-					data.active_color = print_color {100, 100, 100}
+			case SYNOPSIS:
+				data.base_color = print_color{100, 100, 100} // @color hardcoded
+				data.active_color = print_color{100, 100, 100}
 
-				case CHARACTER:
-					manager.last_char = lines[0]
+			case CHARACTER:
+				manager.last_char = lines[0]
 			}
 
 			for i, line := range lines {
@@ -758,22 +782,26 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 				draw_text(document, line, manager.pos_x, manager.pos_y, justify, &data)
 
 				if node.revised {
-					document.SetX(paper.width - inch / 2)
+					document.SetX(paper.width - inch/2)
 					document.Text("*")
 				}
 
-				if i != len(lines) - 1 {
+				if i != len(lines)-1 {
 					manager.pos_y += line_height
 
 					// internal wrapped block overflow
 					if manager.pos_y > manager.safe_height {
-						if inside_char { print_more(document, manager) }
+						if inside_char {
+							print_more(document, manager)
+						}
 
 						header := format_header(manager, content, manager.current_header)
 						footer := format_header(manager, content, manager.current_footer)
 
 						new_page(document, manager, header, footer)
-						if inside_char { print_cont(document, manager) }
+						if inside_char {
+							print_cont(document, manager)
+						}
 					}
 				}
 			}
@@ -785,7 +813,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 		}
 
 		// regular page overflow at the end of writing
-		if manager.pos_y + pica > manager.safe_height || node.node_type == PAGE_BREAK {
+		if manager.pos_y+pica > manager.safe_height || node.node_type == PAGE_BREAK {
 			header := format_header(manager, content, manager.current_header)
 			footer := format_header(manager, content, manager.current_footer)
 
@@ -802,7 +830,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 		// edge case for char + dialogue with
 		// many elements that were getting split
-		if manager.pos_y + line_height > manager.safe_height {
+		if manager.pos_y+line_height > manager.safe_height {
 			if inside_char {
 				print_more(document, manager)
 
@@ -834,9 +862,9 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 
 	switch justify {
 	case RIGHT:
-		pos_x = start_x - float64(line.length) * char_width
+		pos_x = start_x - float64(line.length)*char_width
 	case CENTER:
-		pos_x = start_x - float64(line.length) * char_width / 2
+		pos_x = start_x - float64(line.length)*char_width/2
 	case LEFT:
 		pos_x = start_x
 	}
@@ -846,18 +874,18 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 
 	// draw highlights for the entire line
 	if len(line.highlight) > 0 {
-		set_color(document, print_color {255, 249, 115}) // @color hardcoded
+		set_color(document, print_color{255, 249, 115}) // @color hardcoded
 
-		for i := 0; i < len(line.highlight) - 1; i += 2 {
+		for i := 0; i < len(line.highlight)-1; i += 2 {
 			a := line.highlight[i]
-			b := line.highlight[i + 1]
+			b := line.highlight[i+1]
 
 			pos_a := float64(a) * char_width
-			pos_b := float64(b - a) * char_width + pos_a
+			pos_b := float64(b-a)*char_width + pos_a
 
 			y := pos_y - pica + 2
 
-			document.Rectangle(pos_x + pos_a - 2, y, pos_x + pos_b + 2, y + float64(font_size) + 2, "F", 0, 0)
+			document.Rectangle(pos_x+pos_a-2, y, pos_x+pos_b+2, y+float64(font_size)+2, "F", 0, 0)
 		}
 
 		set_color(document, data.active_color)
@@ -890,49 +918,49 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 
 	// draw the underlines for the entire line
 	if len(line.underline) > 0 {
-		for i := 0; i < len(line.underline) - 1; i += 2 {
+		for i := 0; i < len(line.underline)-1; i += 2 {
 			a := line.underline[i]
-			b := line.underline[i + 1]
+			b := line.underline[i+1]
 
 			pos_a := float64(a) * char_width
-			pos_b := float64(b - a) * char_width + pos_a
+			pos_b := float64(b-a)*char_width + pos_a
 
 			y := pos_y + 2.5
 
-			document.Line(pos_x + pos_a, y, pos_x + pos_b, y)
+			document.Line(pos_x+pos_a, y, pos_x+pos_b, y)
 		}
 	}
 
 	// draw strikeouts for the entire line
 	if len(line.strikeout) > 0 {
-		for i := 0; i < len(line.strikeout) - 1; i += 2 {
+		for i := 0; i < len(line.strikeout)-1; i += 2 {
 			a := line.strikeout[i]
-			b := line.strikeout[i + 1]
+			b := line.strikeout[i+1]
 
 			pos_a := float64(a) * char_width
-			pos_b := float64(b - a) * char_width + pos_a
+			pos_b := float64(b-a)*char_width + pos_a
 
-			y := pos_y - pica / 4
+			y := pos_y - pica/4
 
-			document.Line(pos_x + pos_a, y, pos_x + pos_b, y)
+			document.Line(pos_x+pos_a, y, pos_x+pos_b, y)
 		}
 	}
 
 	// draw all the leaves
 	for _, leaf := range line.leaves {
 		if leaf.leaf_type == BOLD {
-			data.is_bold   = leaf.is_opening
+			data.is_bold = leaf.is_opening
 		}
 		if leaf.leaf_type == ITALIC {
 			data.is_italic = leaf.is_opening
 		}
 		if leaf.leaf_type == BOLDITALIC {
-			data.is_bold   = leaf.is_opening
+			data.is_bold = leaf.is_opening
 			data.is_italic = leaf.is_opening
 		}
 		if leaf.leaf_type == NOTE {
 			if leaf.is_opening {
-				data.active_color = print_color {100, 100, 100} // @color hardcoded
+				data.active_color = print_color{100, 100, 100} // @color hardcoded
 			} else {
 				data.active_color = data.base_color
 			}
@@ -942,8 +970,12 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 
 		font_setter := line.font_reset
 
-		if data.is_bold   { font_setter += "B" }
-		if data.is_italic { font_setter += "I" }
+		if data.is_bold {
+			font_setter += "B"
+		}
+		if data.is_italic {
+			font_setter += "I"
+		}
 
 		set_font(document, font_setter)
 
@@ -954,7 +986,7 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 }
 
 // @todo temp functions before rewrite
-func grab_character_block(nodes []*syntax_node) ([]*syntax_node) {
+func grab_character_block(nodes []*syntax_node) []*syntax_node {
 	for i, node := range nodes {
 		if !is_character_train(node.node_type) {
 			return nodes[:i]
@@ -977,8 +1009,10 @@ func draw_character_block(document *gopdf.GoPdf, nodes []*syntax_node, start_pos
 			style = t.style
 
 			switch t.casing {
-			case UPPERCASE: node.raw_text = strings.ToUpper(node.raw_text)
-			case LOWERCASE: node.raw_text = strings.ToLower(node.raw_text)
+			case UPPERCASE:
+				node.raw_text = strings.ToUpper(node.raw_text)
+			case LOWERCASE:
+				node.raw_text = strings.ToLower(node.raw_text)
 			}
 
 			if t.line_height > 0 {
@@ -987,21 +1021,23 @@ func draw_character_block(document *gopdf.GoPdf, nodes []*syntax_node, start_pos
 		}
 
 		switch node.node_type {
-		case CHARACTER:     pos_x += dual_char_margin
-		case PARENTHETICAL: pos_x += dual_para_margin
+		case CHARACTER:
+			pos_x += dual_char_margin
+		case PARENTHETICAL:
+			pos_x += dual_para_margin
 		}
 
-		data := line_data {
-			is_bold:      style & BOLD != 0,
-			is_italic:    style & ITALIC != 0,
-			active_color: print_color {0, 0, 0},
-			base_color:   print_color {0, 0, 0},
+		data := line_data{
+			is_bold:      style&BOLD != 0,
+			is_italic:    style&ITALIC != 0,
+			active_color: print_color{0, 0, 0},
+			base_color:   print_color{0, 0, 0},
 		}
 
 		for i, line := range node.lines {
 			draw_text(document, line, pos_x, pos_y, LEFT, &data)
 
-			if i != len(node.lines) - 1 {
+			if i != len(node.lines)-1 {
 				pos_y += line_height
 			}
 		}
@@ -1024,7 +1060,7 @@ func render_gender_data(document *gopdf.GoPdf, config *config) {
 	// update the table in the source file
 	if has_updated && config.write_gender {
 		if ok := gender_replace_comment(config, data); !ok {
-			fmt.Fprintf(os.Stderr, "failed to replace gender table!")
+			eprintln("failed to replace gender table!")
 			return
 		}
 	}
@@ -1036,7 +1072,7 @@ func render_gender_data(document *gopdf.GoPdf, config *config) {
 
 	{
 		title_line := syntax_leaf_parser("GENDER ANALYSIS", 500, 0)[0]
-		syntax_line_override(title_line, UNDERLINE | BOLD)
+		syntax_line_override(title_line, UNDERLINE|BOLD)
 		draw_text(document, title_line, start_x, start_y, LEFT, &line_data{})
 
 		start_y += pica * 2
@@ -1046,7 +1082,7 @@ func render_gender_data(document *gopdf.GoPdf, config *config) {
 	start_y += pica * 2
 	start_y = print_data_block(document, config, crunch_lines_by_gender(data), "Lines by Gender", start_x, start_y, true)
 	start_y += pica * 2
-	start_y = print_data_block(document, config, crunch_chars_by_lines(data), "Characters by Lines Spoken", start_x, start_y, false)
+	print_data_block(document, config, crunch_chars_by_lines(data), "Characters by Lines Spoken", start_x, start_y, false)
 }
 
 func print_data_block(document *gopdf.GoPdf, config *config, data *data_container, title string, pos_x, pos_y float64, do_bar_graph bool) float64 {

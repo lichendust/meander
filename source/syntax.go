@@ -1,3 +1,22 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 type fountain_content struct {
@@ -5,7 +24,6 @@ type fountain_content struct {
 	nodes []*syntax_node
 }
 
-// node type
 const (
 	WHITESPACE uint8 = iota
 	PAGE_BREAK
@@ -31,12 +49,10 @@ const (
 )
 
 type syntax_node struct {
-	node_type  uint8
-	level      uint8
-	revised    bool
-	template   *template_entry
-
-	raw_text   string
-
-	lines      []*syntax_line
+	node_type uint8
+	level     uint8
+	revised   bool
+	template  *template_entry
+	raw_text  string
+	lines     []*syntax_line
 }

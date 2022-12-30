@@ -1,3 +1,22 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
@@ -115,7 +134,7 @@ func find_default_file() string {
 			return nil
 		}
 
-		if ext[1] != 'f' && ext != ".ftn" && ext != ".fountain" {
+		if ext[1] != 'f' && ext != fountain_short_ext && ext != fountain_extension {
 			return nil
 		}
 
@@ -137,7 +156,7 @@ func find_default_file() string {
 
 	// otherwise, get more specific and make
 	// a sensible selection based on these names
-	default_names := [...]string {
+	default_names := [...]string{
 		"root",
 		"main",
 		"master",
@@ -160,7 +179,11 @@ func find_default_file() string {
 
 func rewrite_ext(path, new_ext string) string {
 	ext := filepath.Ext(path)
-	raw := path[:len(path) - len(ext)]
+	raw := path[:len(path)-len(ext)]
 
 	return raw + new_ext
+}
+
+func write_file(path string, content []byte) bool {
+	return os.WriteFile(path, content, 0777) == nil
 }

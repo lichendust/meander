@@ -1,8 +1,27 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
-	"strings"
 	"os/exec"
+	"strings"
 )
 
 // pulls a line-by-line block of all git
@@ -13,7 +32,6 @@ func raw_git_revisions() (string, bool) {
 	cmd := exec.Command("git", "tag", "-l", "-n1", "--sort=-creatordate")
 
 	result, err := cmd.Output()
-
 	if err != nil {
 		return "", false
 	}
@@ -29,7 +47,6 @@ func load_file_git_tag(file_name, revision_tag string) (string, bool) {
 	cmd := exec.Command("git", "diff", "-U999999", revision_tag, file_name)
 
 	result, err := cmd.Output()
-
 	if err != nil {
 		return "", false
 	}
@@ -46,7 +63,8 @@ func load_file_git_tag(file_name, revision_tag string) (string, bool) {
 
 			switch text[0] {
 			case '\\', '+', '-':
-			default: text = " " + text
+			default:
+				text = " " + text
 			}
 		}
 
@@ -60,14 +78,15 @@ func load_file_git_tag(file_name, revision_tag string) (string, bool) {
 			break
 		}
 
-		text = text[n + 2:]
+		text = text[n+2:]
 	}
 
 	text = strings.TrimSpace(text)
 
 	switch text[0] {
 	case '\\', '+', '-':
-	default: text = " " + text
+	default:
+		text = " " + text
 	}
 
 	return normalise_text(text), true
@@ -76,7 +95,7 @@ func load_file_git_tag(file_name, revision_tag string) (string, bool) {
 // adds the additional byte-per-line for diff aware mode
 // so that we don't have to track pieces individually
 func artificial_diff(input string) string {
-	buffer := strings.Builder {}
+	buffer := strings.Builder{}
 	buffer.Grow(len(input) * 2)
 
 	for _, c := range input {

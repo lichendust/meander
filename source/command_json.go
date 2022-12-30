@@ -1,15 +1,30 @@
+/*
+	Meander
+	A portable Fountain utility for production writing
+	Copyright (C) 2022-2023 Harley Denham
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
-import (
-	"os"
-	"fmt"
-	"encoding/json"
-)
+import "encoding/json"
 
 type JSON_File struct {
 	Meta struct {
 		Source  string `json:"source"`
-		Version uint16 `json:"version"`
+		Version uint8  `json:"version"`
 	} `json:"meta"`
 	Title struct {
 		Title     string `json:"title,omitempty"`
@@ -45,17 +60,13 @@ var node_type_convert = map[uint8]string{
 	ACTION:        "action",
 	LIST:          "list",
 	SCENE:         "scene",
-	CHARACTER:     "character",
-	PARENTHETICAL: "parenthetical",
-	DIALOGUE:      "dialogue",
+	CHARACTER:     "dialogue", // CHARACTER is the starting point for a "dialogue" json entry
 	LYRIC:         "lyric",
 	TRANSITION:    "transition",
 	CENTERED:      "centered",
 	SYNOPSIS:      "synopsis",
 	SECTION:       "section",
 }
-
-const remove_format_chars = true
 
 func strip_on_condition(input string, is_stripped bool) string {
 	if input == "" {
@@ -71,22 +82,29 @@ func command_json(config *config) {
 	content, ok := syntax_parser(config)
 
 	if !ok {
-		fmt.Fprintf(os.Stderr, "failed to merge file %s\n", config.source_file)
+		eprintln("failed to merge file", config.source_file)
 		return
 	}
+
+	remove_format_chars := !config.json_keep_formatting
 
 	json_file := &JSON_File{}
 
 	// meta
 	{
-		version_number, _ := make_version_number(title)
-
 		json_file.Meta.Source  = title
-		json_file.Meta.Version = version_number
+		json_file.Meta.Version = 1
 	}
 
 	// title page
 	{
+		/*
+			this is nuts, obviously, but we do it to make the
+			output of the title page idempotent. Go has no
+			way of guaranteeing map order, and even if
+			we manually sorted them before copying, the JSON
+			package will go do whatever it wants after that.
+		*/
 		json_file.Title.Title     = strip_on_condition(content.title["title"],      remove_format_chars)
 		json_file.Title.Credit    = strip_on_condition(content.title["credit"],     remove_format_chars)
 		json_file.Title.Author    = strip_on_condition(content.title["author"],     remove_format_chars)
@@ -161,16 +179,13 @@ func command_json(config *config) {
 
 	// write the file
 	b, err := json.MarshalIndent(json_file, "", "\t")
-
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to marshal JSON")
+		eprintln("failed to marshal JSON")
 		return
 	}
 
-	err = os.WriteFile(config.output_file, b, 0777)
-
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to write out JSON")
-		return
+	ok = write_file(config.output_file, b)
+	if !ok {
+		eprintln("failed to write", config.output_file)
 	}
 }
