@@ -42,6 +42,9 @@ Characters can also have multiple names throughout the script, for a variety of 
 /*
     [gender.male]
     Ashby | Captain Ashby
+
+    [gender.female]
+    Rosemary | Rosemary Harper
 */
 
 The first name in the entry is used as their canonical name for all subsequent output.

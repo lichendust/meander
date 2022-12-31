@@ -24,27 +24,37 @@ import (
 	"strings"
 )
 
-// pulls a line-by-line block of all git
-// tags, in creation (revision) order
-// we'll use this to find the most recent
-// revision if it was unspecified
-func raw_git_revisions() (string, bool) {
-	cmd := exec.Command("git", "tag", "-l", "-n1", "--sort=-creatordate")
+/*
+	@todo allow user to _not_ specify a tag
+	and go find the most recent one for them
 
-	result, err := cmd.Output()
-	if err != nil {
-		return "", false
+	func raw_git_revisions() (string, bool) {
+		cmd := exec.Command("git", "tag", "-l", "-n1", "--sort=-creatordate")
+
+		result, err := cmd.Output()
+		if err != nil {
+			return "", false
+		}
+
+		return strings.TrimSpace(string(result)), true
 	}
-
-	return strings.TrimSpace(string(result)), true
-}
+*/
 
 // this is the "same" function as load_file_normalise, just
 // from a specific git tag.  if, for a given file, the tag
 // has no reference (newer file, for example) it falls back
 // to load_file_normalise and one-stop-shops the process
-func load_file_git_tag(file_name, revision_tag string) (string, bool) {
-	cmd := exec.Command("git", "diff", "-U999999", revision_tag, file_name)
+func load_file_tag(file_name, revision_tag string, mode version_control) (string, bool) {
+	var cmd *exec.Cmd
+
+	switch mode {
+	case GIT:
+		cmd = exec.Command("git", "diff", "-U999999", revision_tag, file_name)
+	case HG:
+		cmd = exec.Command("hg", "diff", "-U999999", "-r", revision_tag, file_name)
+	default:
+		return "", false
+	}
 
 	result, err := cmd.Output()
 	if err != nil {
@@ -71,7 +81,7 @@ func load_file_git_tag(file_name, revision_tag string) (string, bool) {
 		return text, ok
 	}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 2; i += 1 {
 		n := rune_pair(text, '@', '@')
 
 		if n < 0 {

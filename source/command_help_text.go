@@ -32,11 +32,22 @@ convert them to a plain-text Fountain file.
 $1Supported Formats$0
 -----------------
 
+    PDF             $1.pdf$0
     Final Draft     $1.fdx$0
     Highland 2      $1.highland$0
 
 Meander will check the input file extension to ensure the file 
-can be handled.  This cannot be forced.`
+can be handled.  This cannot be forced.
+
+$1Flags$0
+-----
+
+    $1--raw$0
+
+    raw only applies to PDF conversions, and simply forces
+    Meander to dump all text, exactly as it is found.  Useful
+    when the conversion is struggling to re-assemble the output
+    correctly or when the input doesn't resemble a screenplay.`
 
 const comm_data = `
 Data generates a JSON file containing the content of and some 
@@ -559,19 +570,18 @@ boneyard comment:
 
 /*
     [gender.male]
-    Ashby
-    Jenks
+    John
 
     [gender.female]
-    Rosemary
-    Sissix
-    Kizzy
+    Jess | Young Jess
+    Jane
 
     [gender.<custom>]
-    Dr. Chef
+    Jesse
+    Dylan
 
     [gender.ignore]
-    Market Stall Owner
+    Some Dude
 */
 
 This special boneyard must be found somewhere in the input 

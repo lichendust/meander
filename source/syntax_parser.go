@@ -25,6 +25,44 @@ import (
 	"unicode/utf8"
 )
 
+type fountain_content struct {
+	title map[string]string
+	nodes []*syntax_node
+}
+
+const (
+	WHITESPACE uint8 = iota
+	PAGE_BREAK
+	HEADER
+	FOOTER
+	PAGE_NUMBER
+	SCENE_NUMBER
+
+	ACTION
+	LIST
+	SCENE
+	CHARACTER
+	PARENTHETICAL
+	DIALOGUE
+	LYRIC
+	TRANSITION
+	CENTERED
+	SYNOPSIS
+
+	SECTION
+	SECTION2
+	SECTION3
+)
+
+type syntax_node struct {
+	node_type uint8
+	level     uint8
+	revised   bool
+	template  *template_entry
+	raw_text  string
+	lines     []*syntax_line
+}
+
 func get_last_node(nodes []*syntax_node) (*syntax_node, bool) {
 	if len(nodes) > 0 {
 		return nodes[len(nodes)-1], true
@@ -94,7 +132,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 
 	for _, c := range text {
 		if c == '\n' {
-			token_count++
+			token_count += 1
 		}
 	}
 
@@ -276,7 +314,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 			// one
 			if last_node, ok := get_last_node(nodes); ok {
 				if last_node.node_type == WHITESPACE {
-					last_node.level++
+					last_node.level += 1
 					continue
 				}
 			}
@@ -307,7 +345,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 
 				if clean_line[len(clean_line)-1] == '^' {
 					clean_line = clean_line[:len(clean_line)-1]
-					level++
+					level += 1
 				}
 
 				the_node := &syntax_node{
@@ -571,7 +609,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 
 			if clean_line[len(clean_line)-1] == '^' {
 				clean_line = consume_ending_whitespace(clean_line[:len(clean_line)-1])
-				level++
+				level += 1
 			}
 
 			the_node := &syntax_node{
@@ -811,4 +849,32 @@ func consume_title_page(input string) string {
 		}
 	}
 	return input
+}
+
+// we don't actually reject any invalid keys,
+// it's just that the unsaid convention
+// among other Fountain parsers is to reject
+// the title page if the *first* entry isn't
+// a standard one.
+var valid_title_page = map[string]bool{
+	// fountain
+	"title":      true,
+	"credit":     true,
+	"author":     true,
+	"source":     true,
+	"contact":    true,
+	"revision":   true,
+	"copyright":  true,
+	"draft date": true,
+	"draft_date": true,
+	"notes":      true,
+
+	// meander
+	"format": true,
+	"paper":  true,
+
+	"cont tag": true,
+	"cont_tag": true,
+	"more tag": true,
+	"more_tag": true,
 }

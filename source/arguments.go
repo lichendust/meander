@@ -41,6 +41,12 @@ const (
 	SCENE_GENERATE              // create new numbers
 )
 
+type version_control uint8
+const (
+	GIT version_control = iota
+	HG
+)
+
 // defaults
 const (
 	// always all lowercase
@@ -66,9 +72,11 @@ type config struct {
 	write_gender         bool
 	include_gender       bool
 	json_keep_formatting bool
+	raw_convert          bool
 
-	revision     bool
-	revision_tag string
+	revision        bool
+	revision_system version_control
+	revision_tag    string
 
 	source_file string
 	output_file string
@@ -120,7 +128,7 @@ func get_arguments() (*config, bool) {
 
 	has_errors := false
 
-	conf := &config {}
+	conf := &config{}
 
 	for {
 		args = args[counter:]
@@ -170,20 +178,46 @@ func get_arguments() (*config, bool) {
 
 		a, b := pull_argument(args[counter:])
 
-		counter ++
-
-		if a == "" {
-			patharg++
-			continue
-		}
+		counter += 1
 
 		switch a {
+		case "":
+			// continue to below
+
 		case "revision", "r":
 			conf.revision = true
 
 			if b != "" {
 				conf.revision_tag = b
-				counter ++
+				counter += 1
+			} else {
+				eprintln("revision mode must have a version control tag")
+				has_errors = true
+			}
+
+			{
+				cwd := fix_path(".")
+
+				git_path, git_found := find_file_above(cwd, ".git")
+				hg_path,  hg_found  := find_file_above(cwd, ".hg")
+
+				if git_found && hg_found {
+					if len(git_path) > len(hg_path) {
+						conf.revision_system = GIT
+					} else {
+						conf.revision_system = HG
+					}
+					continue
+				} else if git_found {
+					conf.revision_system = GIT
+					continue
+				} else if hg_found {
+					conf.revision_system = HG
+					continue
+				}
+
+				eprintln("no version control system found for revision mode")
+				has_errors = true
 			}
 			continue
 
@@ -214,6 +248,10 @@ func get_arguments() (*config, bool) {
 			conf.include_sections = true
 			continue
 
+		case "raw":
+			conf.raw_convert = true
+			continue
+
 		case "update-gender", "u":
 			conf.write_gender = true
 			continue
@@ -229,7 +267,7 @@ func get_arguments() (*config, bool) {
 				} else {
 					eprintf("invalid scene flag: %q", b)
 				}
-				counter ++
+				counter += 1
 			} else {
 				eprintln("args: missing scene mode")
 				has_errors = true
@@ -239,7 +277,7 @@ func get_arguments() (*config, bool) {
 		case "format", "f":
 			if b != "" {
 				conf.template = strings.ToLower(b)
-				counter ++
+				counter += 1
 
 				if _, ok := template_store[b]; !ok {
 					eprintf("args: %q not a template", b)
@@ -257,7 +295,7 @@ func get_arguments() (*config, bool) {
 				b = strings.ToLower(b)
 
 				conf.paper_size = b
-				counter ++
+				counter += 1
 
 				if _, ok := paper_store[b]; !ok {
 					eprintf("args: %q is not a supported paper size", b)
@@ -274,7 +312,7 @@ func get_arguments() (*config, bool) {
 			has_errors = true
 
 			if b != "" {
-				counter ++
+				counter += 1
 			}
 		}
 
@@ -288,7 +326,7 @@ func get_arguments() (*config, bool) {
 			has_errors = true
 		}
 
-		patharg++
+		patharg += 1
 	}
 
 	if conf.source_file == "" {

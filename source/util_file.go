@@ -25,6 +25,8 @@ import (
 	"path/filepath"
 )
 
+
+// IO
 func load_file(source_file string) (string, bool) {
 	bytes, err := os.ReadFile(source_file)
 	if err != nil {
@@ -48,6 +50,13 @@ func load_file_normalise(source_file string) (string, bool) {
 	return "", false
 }
 
+func write_file(path string, content []byte) bool {
+	return os.WriteFile(path, content, 0777) == nil
+}
+
+
+
+// PATHS
 // fixes paths from command input
 func fix_path(input string) string {
 	if path, err := filepath.Abs(input); err == nil {
@@ -55,6 +64,13 @@ func fix_path(input string) string {
 	} else {
 		panic(err)
 	}
+}
+
+func rewrite_ext(path, new_ext string) string {
+	ext := filepath.Ext(path)
+	raw := path[:len(path)-len(ext)]
+
+	return raw + new_ext
 }
 
 // fixes paths from included files
@@ -65,6 +81,9 @@ func include_path(parent, input string) string {
 	return input
 }
 
+
+
+// seeking files
 func find_file(start_location, target string) (string, bool) {
 	final_path := ""
 
@@ -89,27 +108,27 @@ func find_file(start_location, target string) (string, bool) {
 	return filepath.ToSlash(final_path), final_path != ""
 }
 
-// makes working_dir output from input
-/*func make_output_from_input(input, target_ext string) string {
-	return input[:len(input) - len(filepath.Ext(input))] + target_ext
-}*/
-
-// relativises output path based on working dir
-/*func get_relative_output(target_path string) string {
-	cwd, err := os.Getwd()
-
+func find_file_above(start_location, target string) (string, bool) {
+	array, err := os.ReadDir(start_location)
 	if err != nil {
-		return target_path
+		return "", false
 	}
 
-	path, err := filepath.Rel(cwd, target_path)
+	for _, f := range array {
+		name := f.Name()
 
-	if err != nil {
-		return target_path
+		if name == target {
+			return filepath.ToSlash(filepath.Join(start_location, name)), true
+		}
 	}
 
-	return path
-}*/
+	path := filepath.Dir(start_location)
+	if path != "" {
+		return find_file_above(path, target)
+	}
+
+	return "", false
+}
 
 // test for "default" files in working directory
 func find_default_file() string {
@@ -175,15 +194,4 @@ func find_default_file() string {
 	}
 
 	return ""
-}
-
-func rewrite_ext(path, new_ext string) string {
-	ext := filepath.Ext(path)
-	raw := path[:len(path)-len(ext)]
-
-	return raw + new_ext
-}
-
-func write_file(path string, content []byte) bool {
-	return os.WriteFile(path, content, 0777) == nil
 }

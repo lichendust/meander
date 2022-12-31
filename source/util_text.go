@@ -30,7 +30,7 @@ var ascii_space = [256]uint8{'\t': 1, '\n': 1, '\v': 1, '\f': 1, '\r': 1, ' ': 1
 func consume_whitespace(input string) string {
 	start := 0
 
-	for ; start < len(input); start++ {
+	for ; start < len(input); start += 1 {
 		c := input[start]
 
 		if c >= utf8.RuneSelf {
@@ -164,7 +164,7 @@ func count_whitespace(input string) int {
 func count_all_runes(input string) int {
 	count := 0
 	for range input {
-		count++
+		count += 1
 	}
 	return count
 }
@@ -175,7 +175,7 @@ func count_rune(input string, r rune) int {
 		if c != r {
 			return count
 		}
-		count++
+		count += 1
 	}
 	return count
 }

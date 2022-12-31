@@ -21,16 +21,6 @@ package main
 
 import "github.com/signintech/gopdf"
 
-// @todo this needs to be looked at because it's preventing
-// internationalisation from going ahead safely i'd like a
-// nice way to do this without needing weird config switches
-// in each individual screenplay
-const (
-	more_tag   = "(more)"
-	cont_tag   = "(CONT'D)"
-	cont_check = "(CONT" // hrgh
-)
-
 const (
 	font_size int = 12
 
@@ -93,40 +83,326 @@ type template_entry struct {
 	para_indent int     // add first line indentation    (0 = ignore)
 }
 
-// this method should allow for easy language
-// expansion later
 
-// the parser sets userdata to lowercase for
-// comparison, so all declarations in here
-// should be lowercase.
-var valid_scene = map[string]bool{
-	"int":     true,
-	"ext":     true,
-	"int/ext": true,
-	"ext/int": true,
-	"i/e":     true,
-	"e/i":     true,
-	"est":     true,
-	"scene":   true,
+
+// @todo hardcoded
+const (
+	dual_width       = inch * 2.5
+	dual_char_margin = inch / 2
+	dual_para_margin = inch / 2
+)
+
+var paper_store = map[string]*paper{
+	"a4": {
+		paper_data: gopdf.PageSizeA4,
+		width:      inch * 8.27,
+		height:     inch * 11.69,
+	},
+	"usletter": {
+		paper_data: gopdf.PageSizeLetter,
+		width:      inch * 8.5,
+		height:     inch * 11,
+	},
 }
 
-var valid_transition = map[string]bool{
-	"to:": true,
-}
+var template_store = map[string]*template{
+	"screenplay": {
+		line_height_title: line_height_title,
+		line_height:       line_height,
 
-var valid_title_page = map[string]bool{
-	// fountain
-	"title":      true,
-	"credit":     true,
-	"author":     true,
-	"source":     true,
-	"contact":    true,
-	"revision":   true,
-	"copyright":  true,
-	"draft date": true,
-	"notes":      true,
+		title_page_align: CENTER,
 
-	// meander
-	"format": true,
-	"paper":  true,
+		allow_dual_dialogue: true,
+
+		look_up: map[uint8]*template_entry{
+			ACTION: {},
+			SCENE: {
+				casing:      UPPERCASE,
+				style:       UNDERLINE,
+				space_above: pica,
+				width:       inch * 5,
+			},
+			CHARACTER: {
+				margin: inch * 2,
+			},
+			PARENTHETICAL: {
+				margin: inch * 1.4,
+				width:  inch * 2,
+			},
+			DIALOGUE: {
+				margin: inch * 1,
+				width:  inch * 3,
+			},
+			LYRIC: {
+				margin: inch * 1,
+				width:  inch * 3,
+				style:  ITALIC,
+			},
+			TRANSITION: {
+				casing:  UPPERCASE,
+				justify: RIGHT,
+			},
+			CENTERED: {
+				justify: CENTER,
+				width:   inch * 5,
+			},
+			SYNOPSIS: {
+				skip:  true,
+				style: ITALIC,
+			},
+			SECTION: {
+				skip:        true,
+				casing:      UPPERCASE,
+				style:       BOLD | UNDERLINE,
+				space_above: pica,
+			},
+			SECTION2: {
+				skip:   true,
+				casing: UPPERCASE,
+				style:  BOLD,
+			},
+			SECTION3: {
+				skip:  true,
+				style: BOLD,
+			},
+		},
+	},
+	"stageplay": {
+		line_height_title: line_height_title,
+		line_height:       line_height,
+
+		title_page_align: CENTER,
+
+		allow_dual_dialogue: true,
+
+		look_up: map[uint8]*template_entry{
+			ACTION: {
+				margin: inch * 2.5,
+				width:  inch * 3.2,
+			},
+			SCENE: {
+				margin:      -inch / 4,
+				casing:      UPPERCASE,
+				style:       BOLD,
+				space_above: pica,
+				width:       inch * 5,
+			},
+			CHARACTER: {
+				margin: inch * 1.2,
+			},
+			PARENTHETICAL: {
+				margin: inch,
+				width:  inch * 2,
+			},
+			DIALOGUE: {
+				width: inch * 4.5,
+			},
+			LYRIC: {
+				width: inch * 4.5,
+				style: ITALIC,
+			},
+			TRANSITION: {
+				casing:  UPPERCASE,
+				justify: RIGHT,
+			},
+			CENTERED: {
+				justify: CENTER,
+				width:   inch * 5,
+			},
+			SYNOPSIS: {
+				skip:  true,
+				style: ITALIC,
+			},
+			SECTION: {
+				skip:        true,
+				casing:      UPPERCASE,
+				style:       BOLD | UNDERLINE,
+				space_above: pica,
+			},
+			SECTION2: {
+				skip:   true,
+				casing: UPPERCASE,
+				style:  BOLD,
+			},
+			SECTION3: {
+				skip:  true,
+				style: BOLD,
+			},
+		},
+	},
+	"graphicnovel": {
+		line_height_title: line_height_title,
+		line_height:       line_height,
+
+		title_page_align: CENTER,
+
+		allow_dual_dialogue: true,
+
+		look_up: map[uint8]*template_entry{
+			ACTION: {},
+			SCENE: {
+				casing:      UPPERCASE,
+				style:       UNDERLINE,
+				space_above: pica,
+				width:       inch * 5,
+			},
+			CHARACTER: {
+				margin: inch * 2,
+			},
+			PARENTHETICAL: {
+				margin: inch * 1.4,
+				width:  inch * 2,
+			},
+			DIALOGUE: {
+				margin: inch * 1,
+				width:  inch * 3,
+			},
+			LYRIC: {
+				margin: inch * 1,
+				width:  inch * 3,
+				style:  ITALIC,
+			},
+			TRANSITION: {
+				casing:  UPPERCASE,
+				justify: RIGHT,
+			},
+			CENTERED: {
+				justify: CENTER,
+				width:   inch * 5,
+			},
+			SYNOPSIS: {
+				skip:  true,
+				style: ITALIC,
+			},
+			SECTION: {
+				casing:      UPPERCASE,
+				style:       BOLD | UNDERLINE,
+				space_above: pica,
+			},
+			SECTION2: {
+				casing: UPPERCASE,
+				style:  BOLD,
+			},
+			SECTION3: {
+				style: BOLD,
+			},
+		},
+	},
+	"manuscript": {
+		line_height_title: line_height_title,
+		line_height:       pica * 1.5,
+
+		title_page_align: CENTER,
+
+		allow_dual_dialogue: false,
+
+		look_up: map[uint8]*template_entry{
+			ACTION: {
+				para_indent: 4,
+			},
+			SCENE: {
+				casing:      UPPERCASE,
+				space_above: pica,
+				width:       inch * 5,
+			},
+			CHARACTER: {
+				margin: inch * 2,
+			},
+			PARENTHETICAL: {
+				margin: inch * 1.4,
+				width:  inch * 2,
+			},
+			DIALOGUE: {
+				margin: inch * 1,
+				width:  inch * 3,
+			},
+			LYRIC: {
+				margin: inch * 1,
+				width:  inch * 3,
+				style:  ITALIC,
+			},
+			TRANSITION: {
+				casing:  UPPERCASE,
+				justify: RIGHT,
+			},
+			CENTERED: {
+				justify: CENTER,
+				width:   inch * 5,
+			},
+			SYNOPSIS: {
+				skip:  true,
+				style: ITALIC,
+			},
+			SECTION: {
+				justify:     CENTER,
+				casing:      UPPERCASE,
+				style:       BOLD,
+				space_above: pica,
+			},
+			SECTION2: {
+				casing:      UPPERCASE,
+				style:       BOLD,
+				space_above: pica,
+			},
+			SECTION3: {
+				style:       BOLD,
+				space_above: pica,
+			},
+		},
+	},
+	"document": {
+		line_height_title: line_height_title,
+		line_height:       line_height,
+
+		allow_dual_dialogue: true,
+
+		look_up: map[uint8]*template_entry{
+			ACTION: {},
+			SCENE: {
+				casing:      UPPERCASE,
+				space_above: pica,
+				width:       inch * 5,
+			},
+			CHARACTER: {
+				margin: inch * 2,
+			},
+			PARENTHETICAL: {
+				margin: inch * 1.4,
+				width:  inch * 2,
+			},
+			DIALOGUE: {
+				margin: inch * 1,
+				width:  inch * 3,
+			},
+			LYRIC: {
+				margin: inch * 1,
+				width:  inch * 3,
+				style:  ITALIC,
+			},
+			TRANSITION: {
+				casing:  UPPERCASE,
+				justify: RIGHT,
+			},
+			CENTERED: {
+				justify: CENTER,
+				width:   inch * 5,
+			},
+			SYNOPSIS: {
+				skip:  true,
+				style: ITALIC,
+			},
+			SECTION: {
+				style:       BOLD | UNDERLINE,
+				space_above: pica,
+			},
+			SECTION2: {
+				style:       UNDERLINE,
+				space_above: pica,
+			},
+			SECTION3: {
+				style:       ITALIC | UNDERLINE,
+				space_above: pica,
+			},
+		},
+	},
 }

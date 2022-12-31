@@ -32,7 +32,7 @@ func command_convert(config *config) {
 		convert_final_draft(config)
 
 	case ".pdf":
-		convert_pdf(config) // @nocheckin
+		convert_pdf(config)
 
 	case fountain_extension, fountain_short_ext:
 		eprintf("convert: %q is already a Fountain file", config.source_file)

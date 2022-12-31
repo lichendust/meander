@@ -12,13 +12,13 @@ $1Flags$0
 
     $1--preserve-markdown$0
 
-    by default, the export will strip *italic*,
-    +highlight+, etc. Markdown formatting characters.
+    by default, the export will strip *italic*, +highlight+,
+    etc. Markdown formatting characters.
 
     $1--revision$0
 
-    if revision mode is enabled, a $1revised$0
-    value can reflect in the content entries.
+    if revision mode is enabled, a $1revised$0 value can reflect
+    in the content entries.
 
 The resulting JSON blob is a dictionary containing four entries:
 

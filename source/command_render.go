@@ -325,6 +325,10 @@ type renderer struct {
 
 	current_header string
 	current_footer string
+
+	more_tag   string
+	cont_tag   string
+	cont_check string
 }
 
 func format_header(manager *renderer, content *fountain_content, input string) string {
@@ -376,7 +380,7 @@ func new_page(document *gopdf.GoPdf, manager *renderer, header, footer string) {
 
 	manager.pos_y = margin_top
 	manager.first_on_page = true
-	manager.page_counter++
+	manager.page_counter += 1
 
 	draw_header(document, manager, header, header_height)
 	draw_header(document, manager, footer, manager.paper.height-footer_height)
@@ -387,7 +391,7 @@ func print_more(document *gopdf.GoPdf, manager *renderer) {
 
 	document.SetX(margin_left + p_indent)
 	document.SetY(manager.pos_y)
-	document.Text(more_tag)
+	document.Text(manager.more_tag)
 }
 
 func print_cont(document *gopdf.GoPdf, manager *renderer) {
@@ -400,13 +404,13 @@ func print_cont(document *gopdf.GoPdf, manager *renderer) {
 	// physically written (CONT'D)s when
 	// page-splitting
 	for _, leaf := range manager.last_char.leaves {
-		if strings.Contains(leaf.text, cont_check) {
+		if strings.Contains(leaf.text, manager.cont_check) {
 			manager.pos_y += manager.template.line_height
 			return
 		}
 	}
 
-	document.Text(" " + cont_tag)
+	document.Text(" " + manager.cont_tag)
 	manager.pos_y += manager.template.line_height
 }
 
@@ -438,6 +442,30 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 		template: template,
 		paper:    paper,
 	}
+
+	{
+		// sure, whatever
+		if x, ok := content.title["cont tag"]; ok { manager.cont_tag = x }
+		if x, ok := content.title["cont_tag"]; ok { manager.cont_tag = x }
+		if x, ok := content.title["more tag"]; ok { manager.more_tag = x }
+		if x, ok := content.title["more_tag"]; ok { manager.more_tag = x }
+
+		if manager.more_tag == "" {
+			manager.more_tag = default_more_tag
+		}
+		if manager.cont_tag == "" {
+			manager.cont_tag   = default_cont_tag
+			manager.cont_check = default_cont_check
+		} else {
+			length := len(manager.cont_tag)
+			if length % 2 != 0 {
+				length += 1
+			}
+			manager.cont_check = manager.cont_tag[:length / 2]
+		}
+	}
+
+
 
 	{
 		inside_dual_dialogue := false
@@ -717,7 +745,7 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 
 			// if generating, iterate the scene_counter and format it
 			if config.scenes == SCENE_GENERATE {
-				manager.scene_counter++
+				manager.scene_counter += 1
 				scene_number = fmt.Sprintf("%d", manager.scene_counter)
 			}
 

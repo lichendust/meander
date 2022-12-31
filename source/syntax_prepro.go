@@ -27,12 +27,12 @@ import (
 	"path/filepath"
 )
 
-var (
+type prepro_data struct {
 	counter_panel   int
 	counter_figure  int
 	counter_series  int
 	counter_chapter int
-)
+}
 
 func macro(text, keyword string) (string, bool) {
 	if strings.HasPrefix(strings.ToLower(text), keyword) {
@@ -61,6 +61,11 @@ func macro(text, keyword string) (string, bool) {
 }
 
 func syntax_preprocessor(source_file string, config *config) (string, bool) {
+	data := prepro_data{}
+	return prepro_recurse(source_file, config, &data)
+}
+
+func prepro_recurse(source_file string, config *config, data *prepro_data) (string, bool) {
 	path := fix_path(source_file)
 	text := ""
 
@@ -68,7 +73,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 		ok := false
 
 		if config.revision {
-			text, ok = load_file_git_tag(path, config.revision_tag)
+			text, ok = load_file_tag(path, config.revision_tag, config.revision_system)
 		} else {
 			text, ok = load_file_normalise(path)
 		}
@@ -114,7 +119,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 			text = text[n+2:]
 
 			if last_element_removable {
-				newline_count++
+				newline_count += 1
 			}
 
 			if newline_count > 0 {
@@ -178,7 +183,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 				text = text[n+2:]
 
 				if last_element_removable {
-					newline_count++
+					newline_count += 1
 				}
 
 				if newline_count > 0 {
@@ -244,7 +249,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 			if path, ok := macro(test_text, "include"); ok {
 				path = include_path(source_file, path)
 
-				if child_text, ok := syntax_preprocessor(path, config); ok {
+				if child_text, ok := prepro_recurse(path, config, data); ok {
 					if newline_count < 2 {
 						buffer.WriteRune('\n')
 					}
@@ -280,73 +285,69 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 			}
 
 			if x, ok := macro(test_text, "series"); ok {
-				counter_series++
+				data.counter_series += 1
 
 				if x != "" {
 					i, err := strconv.Atoi(x)
-
 					if err != nil {
 						i = 1 // when in rome
 					}
 
-					counter_series = i
+					data.counter_series = i
 				}
 
-				buffer.WriteString(strconv.Itoa(counter_series))
+				buffer.WriteString(strconv.Itoa(data.counter_series))
 				text = text[n+2:]
 				continue
 			}
 
 			if x, ok := macro(test_text, "chapter"); ok {
-				counter_chapter++
+				data.counter_chapter += 1
 
 				if x != "" {
 					i, err := strconv.Atoi(x)
-
 					if err != nil {
 						i = 1 // when in rome
 					}
 
-					counter_chapter = i
+					data.counter_chapter = i
 				}
 
-				buffer.WriteString(strconv.Itoa(counter_chapter))
+				buffer.WriteString(strconv.Itoa(data.counter_chapter))
 				text = text[n+2:]
 				continue
 			}
 
 			if x, ok := macro(test_text, "panel"); ok {
-				counter_panel++
+				data.counter_panel += 1
 
 				if x != "" {
 					i, err := strconv.Atoi(x)
-
 					if err != nil {
 						i = 1 // when in rome
 					}
 
-					counter_panel = i
+					data.counter_panel = i
 				}
 
-				buffer.WriteString(strconv.Itoa(counter_panel))
+				buffer.WriteString(strconv.Itoa(data.counter_panel))
 				text = text[n+2:]
 				continue
 			}
 
 			if x, ok := macro(test_text, "figure"); ok {
-				counter_figure++
+				data.counter_figure += 1
 
 				if x != "" {
 					i, err := strconv.Atoi(x)
-
 					if err != nil {
 						i = 1 // when in rome
 					}
 
-					counter_figure = i
+					data.counter_figure = i
 				}
 
-				buffer.WriteString(strconv.Itoa(counter_figure))
+				buffer.WriteString(strconv.Itoa(data.counter_figure))
 				text = text[n+2:]
 				continue
 			}
@@ -365,7 +366,7 @@ func syntax_preprocessor(source_file string, config *config) (string, bool) {
 
 		if unicode.IsSpace(the_rune) {
 			if the_rune == '\n' {
-				newline_count++
+				newline_count += 1
 			}
 
 			if config.revision {

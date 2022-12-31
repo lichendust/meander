@@ -181,7 +181,7 @@ func do_full_analysis(config *config) (*fountain_content, *Gender_Data, bool, bo
 				lower := strings.ToLower(node.raw_text)
 
 				if _, ok := lookup_table[lower]; ok {
-					lookup_table[lower].LineCount ++
+					lookup_table[lower].LineCount += 1
 				} else {
 					unknown_char := &Gender_Char {
 						Name:   lower,
@@ -544,7 +544,7 @@ func crunch_chars_by_gender(the_comment *Gender_Data) *data_container {
 
 		for _, char := range group.characters {
 			if char.LineCount > 0 {
-				group_chars ++
+				group_chars += 1
 			}
 		}
 
@@ -645,7 +645,7 @@ func gender_replace_comment(config *config, the_comment *Gender_Data) bool {
 			}
 		}
 
-		starting_byte++
+		starting_byte+= 1
 		text = text[1:]
 	}
 

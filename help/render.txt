@@ -42,3 +42,8 @@ $1Force Hidden Syntaxes$0
     $1--notes$0
     $1--synopses$0
     $1--sections$0
+
+$1Revision Mode$0
+-------------
+
+Meander $1experimentally$0 supports a starred revision feature.  It's currently based on Git tags, but this is subject to change.
