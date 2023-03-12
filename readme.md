@@ -23,8 +23,8 @@ In spite of this quite scary table of contents, Meander is *extremely* simple to
 	- [Gender](#gender)
 	- [Data](#data)
 	- [Convert](#convert)
-		- [⚠️ PDF Files](#%E2%9A%A0%EF%B8%8F-pdf-files)
-		- [⚠️ Final Draft Files](#%E2%9A%A0%EF%B8%8F-final-draft-files)
+		- [PDF Files](#pdf-files)
+		- [Final Draft Files](#final-draft-files)
 		- [Highland Files](#highland-files)
 - [Render Flags](#render-flags)
 	- [Scenes](#scenes)
@@ -80,7 +80,7 @@ There's also the usual self-explanatory stuff —
 + `help`
 + `version`
 
-Full documentation for both Fountain and Meander is available from within the binary using the `help` command.
+It should be noted that Meander's help command is extremely powerful and provides detailed information about every command, flag and setting available within Meander, as well as useful resources like a built-in cheat-sheet for Fountain.
 
 ### Render
 
@@ -153,7 +153,7 @@ The data command generates a JSON file containing the content of and data about 
 
     $ meander data [some_film.fountain] [data.json]
 
-This is provided as a useful (but lossy[^2]) data exchange format.  Rather than conversion to other screenplay tools, this is intended for use with non-screenplay software, such as furnishing production-tracking tools with screenplay metadata or dumping statistics into spreadsheets.
+This is provided as a useful data exchange format.  Rather than conversion to other screenplay tools, this is intended for use with non-screenplay software, such as furnishing production-tracking tools with screenplay metadata or dumping statistics into spreadsheets.
 
 The resulting JSON blob is a dictionary containing four entries:
 
@@ -161,6 +161,10 @@ The resulting JSON blob is a dictionary containing four entries:
 + `title` — a dictionary of the title page entries.
 + `characters` — a list of all characters in the screenplay, their alternate names and gender from the gender analysis table, as well as the number of lines they actually speak.
 + `content` — a syntactic breakdown list of the screenplay content, with each paragraph or dialogue entry, etc., tagged by its type.
+
+By default, the data command strips Markdown formatters like \*italics\* from the strings in the JSON file: NLEs, shot-trackers and storyboarding tools are not very likely to actually want them or know what to do with them.  However, it's not wise to assume, so Markdown formatting can be preserved with a flag —
+
+	$ meander data [some_film.fountain] --preserve-markdown
 
 ### Convert
 
@@ -176,11 +180,11 @@ $ meander convert input.fdx
 
 Meander will detect the input format (and report back if it doesn't know what to do with it), then output a Fountain file (or files) alongside the original with a matching file name.  You can also override the output path with another argument, as with other commands.
 
-Each of these conversions has some caveats —
+Each of these conversions has some caveats, with some currently considered ⚠️ experimental —
 
-#### ⚠️ PDF Files
+#### PDF Files
 
-PDF melting is a notoriously *weird* problem.  There is no guarantee that any text is stored linearly inside the file itself.  Meander *assumes it is*, which can lead to some strange output depending on which program created the file.
+⚠️ PDF melting is a notoriously *weird* problem.  There is no guarantee that any text is stored linearly inside the file itself.  Meander *assumes it is*, which can lead to some strange output depending on which program created the file.
 
 In trying to produce valid Fountain syntax, Meander also assumes that the input file actually looks like a screenplay.  For example, it takes into account the spacing of lines on the page to figure out if a chunk of text is dialogue or not.  This may be error prone if the spacing is unexpected or otherwise unlike a 'standard' screenplay.
 
@@ -188,11 +192,11 @@ In the event of major issues, Meander also has a raw text extraction mode which 
 
     $ meander convert file.pdf --raw
 
-#### ⚠️ Final Draft Files
+#### Final Draft Files
 
-For Final Draft, Meander parses the XML structure and attempts to write out a decent approximation in Fountain.  It also adds force-characters to text that it knows Fountain would not recognise as its Final Draft designation.
+⚠️ For Final Draft, Meander parses the XML structure and attempts to write out a decent approximation in Fountain.  It also adds force-characters to text that it knows Fountain would not recognise as its Final Draft designation.
 
-However, only a limited number of files have been tested, none of which have contained more advanced Final Draft features like page-locking, colours and versioning, which will likely cause Meander to stumble.
+With all the files I have available to me, this conversion works extremely well, but all have lacked more advanced Final Draft features like page-locking, colours and versioning, which will likely cause Meander to stumble.
 
 (If you're a Final Draft user and can provide example files that demonstrate any issues with Meander's conversion, please reach out!)
 
@@ -383,5 +387,3 @@ The `{{include}}` syntax feature was originally from the tiny Python utility [Mo
 Highland would then borrow this idea, using curly braces instead.  Meander has adopted the latter for compatibility, but it still felt important to thank Mountain where they did not.
 
 [^1]: "Magic comments" are generally to be avoided, but this was intentionally designed to play nicely with other Fountain tools while ensuring the gender table can still travel with the screenplay, instead of being fed in by a separate file.
-
-[^2]: 'Lossy' here means inline formatting like \*italics\* are removed.  I've yet to encounter an NLE, production tracker or spreadsheet program that understands Markdown formatters, so Meander prefers to remove them.  This simplifies the JSON file immensely, as each paragraph is single, clean string and no additional work is required to reassemble them in a target format or program.
