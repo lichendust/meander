@@ -293,7 +293,7 @@ var template_store = map[string]*template{
 	},
 	"manuscript": {
 		line_height_title: line_height_title,
-		line_height:       pica * 1.5,
+		line_height:       pica * 2,
 
 		title_page_align: CENTER,
 
