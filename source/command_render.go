@@ -22,16 +22,12 @@ package main
 import (
 	"fmt"
 	"time"
+	"math"
 	"strconv"
 	"strings"
 
 	"github.com/signintech/gopdf"
 )
-
-// caches the width of a single character
-// from the selected font — this is why
-// meander is monospace-only right now
-var char_width float64 = 0
 
 // line_data is used to store initial data for draw_text
 // but the same copy is fed back into successive lines to
@@ -146,7 +142,7 @@ func command_render_document(config *config) {
 	document.SetFillColor(0, 0, 0)
 
 	// detect the base width of the font for later
-	char_width = text_width(&document, " ")
+	// char_width = text_width(&document, " ")
 
 	// embed some info — doesn't seem to work?
 	// need to check the library issues.
@@ -480,10 +476,6 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			if has_template {
 				the_node.template = t
 
-				if the_node.node_type == LIST {
-					t.margin = char_width * 2
-				}
-
 				the_style = t.style
 
 				switch t.casing {
@@ -513,10 +505,20 @@ func render_content(document *gopdf.GoPdf, config *config, content *fountain_con
 			if inside_dual_dialogue {
 				switch the_node.node_type {
 				case PARENTHETICAL:
-					the_width = int((dual_width - dual_para_margin) / char_width)
+					the_width = int(math.Floor((dual_width - dual_para_margin) / char_width))
 				case DIALOGUE, LYRIC:
-					the_width = int(dual_width / char_width)
+					the_width = int(math.Floor(dual_width / char_width))
 				}
+
+				// we have to use math.Floor above because now that all of
+				// the operators in these two equations are constants, it
+				// throws a compile error if you try to assign this to a
+				// type where precision would be lost.  I'd understand this
+				// in an assignment to a mismatched type, but
+				// why **explicit conversion** doesn't override this is
+				// beyond me.  I guess it's in line with the Go devs' motto
+				// that you can't write good code unless the compiler is
+				// flagellating you every three seconds.
 			}
 
 			// apply the line-wrap and the_style overrides
@@ -923,7 +925,7 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 			b := line.highlight[i+1]
 
 			pos_a := float64(a) * char_width
-			pos_b := float64(b-a)*char_width + pos_a
+			pos_b := float64(b - a) * char_width + pos_a
 
 			y := pos_y - pica + 2
 
@@ -965,11 +967,11 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 			b := line.underline[i+1]
 
 			pos_a := float64(a) * char_width
-			pos_b := float64(b-a)*char_width + pos_a
+			pos_b := float64(b - a) * char_width + pos_a
 
 			y := pos_y + 2.5
 
-			document.Line(pos_x+pos_a, y, pos_x+pos_b, y)
+			document.Line(pos_x + pos_a, y, pos_x + pos_b, y)
 		}
 	}
 
@@ -980,11 +982,11 @@ func draw_text(document *gopdf.GoPdf, line *syntax_line, start_x, start_y float6
 			b := line.strikeout[i+1]
 
 			pos_a := float64(a) * char_width
-			pos_b := float64(b-a)*char_width + pos_a
+			pos_b := float64(b - a) * char_width + pos_a
 
 			y := pos_y - pica/4
 
-			document.Line(pos_x+pos_a, y, pos_x+pos_b, y)
+			document.Line(pos_x + pos_a, y, pos_x + pos_b, y)
 		}
 	}
 

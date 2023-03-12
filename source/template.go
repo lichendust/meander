@@ -37,6 +37,10 @@ const (
 
 	header_height = margin_top - pica * 3
 	footer_height = margin_bottom - pica * 2
+
+	// hard-coded now because we stopped
+	// supporting user font selection
+	char_width float64 = 7.188
 )
 
 // justifications
@@ -165,7 +169,9 @@ var template_store = map[string]*template{
 				skip:  true,
 				style: BOLD,
 			},
-			LIST: {},
+			LIST: {
+				margin: char_width * 2,
+			},
 		},
 	},
 	"stageplay": {
@@ -229,7 +235,9 @@ var template_store = map[string]*template{
 				skip:  true,
 				style: BOLD,
 			},
-			LIST: {},
+			LIST: {
+				margin: char_width * 2,
+			},
 		},
 	},
 	"graphicnovel": {
@@ -288,7 +296,9 @@ var template_store = map[string]*template{
 			SECTION3: {
 				style: BOLD,
 			},
-			LIST: {},
+			LIST: {
+				margin: char_width * 2,
+			},
 		},
 	},
 	"manuscript": {
@@ -351,7 +361,9 @@ var template_store = map[string]*template{
 				style:       BOLD,
 				space_above: pica,
 			},
-			LIST: {},
+			LIST: {
+				margin: char_width * 2,
+			},
 		},
 	},
 	"document": {
@@ -407,7 +419,9 @@ var template_store = map[string]*template{
 				style:       ITALIC | UNDERLINE,
 				space_above: pica,
 			},
-			LIST: {},
+			LIST: {
+				margin: char_width * 2,
+			},
 		},
 	},
 }
