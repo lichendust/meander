@@ -93,7 +93,7 @@ func normalise_text(input string) string {
 			last_rune = c
 			continue
 
-		case '`':
+		case '`', '‘':
 			buffer.WriteRune('\'')
 			last_rune = c
 			continue
@@ -128,6 +128,25 @@ func normalise_text(input string) string {
 
 		last_rune = c
 		buffer.WriteRune(c)
+	}
+
+	return buffer.String()
+}
+
+// homogenise "Draft Date" or "draft_date" into "draftdate"
+// this helps us simplify any multi-matches in the title page
+func sanitise(input string) string {
+	buffer := strings.Builder{}
+	buffer.Grow(len(input))
+
+	for _, c := range input {
+		if ascii_space[c] == 1 {
+			continue
+		}
+		if c == '_' || c == '-' {
+			continue
+		}
+		buffer.WriteRune(unicode.ToLower(c))
 	}
 
 	return buffer.String()

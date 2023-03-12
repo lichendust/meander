@@ -283,7 +283,7 @@ func render_title_page(document *gopdf.GoPdf, config *config, content *fountain_
 	// bottom right of page
 	pos_y = paper.height - margin_bottom
 
-	for _, c := range []string{"revision", "draft date", "draft_date"} {
+	for _, c := range []string{"revision", "draftdate"} {
 		if t, ok := title[c]; ok {
 			lines := strings.Split(t, "\n")
 

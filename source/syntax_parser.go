@@ -152,7 +152,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 		}
 
 		// get the leading word before the ":"
-		word := strings.ToLower(text[:n])
+		word := text[:n]
 
 		// consume the word and colon
 		text = text[n+1:]
@@ -167,7 +167,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 			first = false
 		}
 
-		word = strings.TrimSpace(word)
+		word = sanitise(strings.TrimSpace(word))
 
 		// make a teeny buffer for reconstituting multi-line entries
 		sub_line_buffer := strings.Builder{}
@@ -797,22 +797,6 @@ func is_valid_transition(line string) bool {
 	return false
 }
 
-func is_title_element(line string) (string, string, bool) {
-	if !strings.Contains(line, ":") {
-		return "", "", false
-	}
-
-	t := strings.SplitN(line, ":", 2)
-
-	name, value := strings.ToLower(t[0]), t[1]
-
-	if valid_title_page[name] {
-		return name, value, true
-	}
-
-	return "", "", false
-}
-
 func has_scene_number(text string) (string, string, bool) {
 	if text[len(text)-1] == '#' {
 		n := 0
@@ -842,13 +826,32 @@ func has_scene_number(text string) (string, string, bool) {
 // quickly discards the title page for included files
 func consume_title_page(input string) string {
 	if n := strings.IndexRune(input, '\n'); n > -1 {
-		if _, _, ok := is_title_element(input[:n]); ok {
+		if is_title_element(input[:n]) {
 			if n := rune_pair(input, '\n', '\n'); n > -1 {
 				return strings.TrimSpace(input[n:])
 			}
 		}
 	}
 	return input
+}
+
+// only used for consume title page
+func is_title_element(line string) bool {
+	found_colon := false
+
+	for i, c := range line {
+		if c == ':' {
+			line = strings.TrimSpace(sanitise(line[:i]))
+			found_colon = true
+			break
+		}
+	}
+
+	if found_colon && valid_title_page[line] {
+		return true
+	}
+
+	return false
 }
 
 // we don't actually reject any invalid keys,
@@ -865,16 +868,13 @@ var valid_title_page = map[string]bool{
 	"contact":    true,
 	"revision":   true,
 	"copyright":  true,
-	"draft date": true,
-	"draft_date": true,
+	"draftdate":  true, // we sanitise spaces
 	"notes":      true,
 
 	// meander
 	"format": true,
 	"paper":  true,
 
-	"cont tag": true,
-	"cont_tag": true,
-	"more tag": true,
-	"more_tag": true,
+	"conttag": true,
+	"moretag": true,
 }
