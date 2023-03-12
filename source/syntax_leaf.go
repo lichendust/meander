@@ -29,10 +29,12 @@ var format_chars = map[rune]bool{
 	'*':  true,
 	'+':  true,
 	'~':  true,
-	'\\': true,
 	'_':  true,
 	']':  true,
 	'[':  true,
+	'"':  true,
+	'\'': true,
+	'\\': true,
 }
 
 const (
@@ -44,6 +46,8 @@ const (
 	STRIKEOUT
 	HIGHLIGHT
 	NOTE
+	QUOTE
+	DOUBLE_QUOTE
 	ESCAPE
 )
 
@@ -119,26 +123,26 @@ func syntax_line_override(line *syntax_line, style int) {
 	// if the input style has a range formatter, we
 	// just replace all ranges with one full-width one
 	// the whole line is then highlighted, etc.
-	if style&UNDERLINE != 0 {
+	if style & UNDERLINE != 0 {
 		line.underline = []int{0, line.length}
 	}
-	if style&STRIKEOUT != 0 {
+	if style & STRIKEOUT != 0 {
 		line.strikeout = []int{0, line.length}
 	}
-	if style&HIGHLIGHT != 0 {
+	if style & HIGHLIGHT != 0 {
 		line.highlight = []int{0, line.length}
 	}
 
 	// remember that aside about gopdf's weird string
 	// up above in the syntax_line struct?
 	// here you go:
-	if style&BOLD != 0 {
+	if style & BOLD != 0 {
 		line.font_reset += "B"
 	}
-	if style&ITALIC != 0 {
+	if style & ITALIC != 0 {
 		line.font_reset += "I"
 	}
-	if style&BOLDITALIC != 0 {
+	if style & BOLDITALIC != 0 {
 		line.font_reset += "BI"
 	}
 }
@@ -172,6 +176,16 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 		case '\\':
 			the_word, rune_width = extract_repeated_rune(input, '\\')
 			is_type = ESCAPE
+
+		case '\'':
+			the_word   = "'"
+			rune_width = 1
+			is_type    = QUOTE
+
+		case '"':
+			the_word   = "\""
+			rune_width = 1
+			is_type    = DOUBLE_QUOTE
 
 		case '*':
 			the_word, rune_width = extract_repeated_rune(input, '*')
@@ -230,13 +244,12 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 			is_type = NORMAL
 		}
 
-		word_width := count_all_runes(the_word)
-
 		format := &inline_format{}
+
 		format.leaf_type = is_type
 		format.text = the_word
 		format.space_width = space_width
-		format.text_width = word_width
+		format.text_width = rune_width
 
 		if is_type == ESCAPE {
 			format.space_only = true
@@ -267,7 +280,7 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 				n := len(entry.text)
 
 				/*
-					there's a looming set of @todo-s at the top
+					there's a looming set of @todos at the top
 					of this function for how formatters are
 					counted, which are _definitely_
 					manifestations of a bug, but in all the
@@ -286,7 +299,7 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 				// if the number of backslashes is even
 				// they're all escaped, so set them "normal"
 				// and halve the length
-				if n%2 == 0 {
+				if n % 2 == 0 {
 					entry.leaf_type = NORMAL
 					entry.space_only = false
 
@@ -301,12 +314,12 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 					entry.leaf_type = NORMAL
 					entry.space_only = false
 
-					entry.text = entry.text[(n+1)/2-1:]
+					entry.text = entry.text[(n + 1)/2 - 1:]
 				}
 
 				// lookahead and escape the next item as applicable
 				if len(the_list[i:]) > 1 {
-					target := the_list[i+1:][0]
+					target := the_list[i + 1:][0]
 					if target.leaf_type != NORMAL {
 						target.leaf_type = NORMAL
 					}
@@ -384,20 +397,20 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 
 	// balance everything we've found
 	{
-		italic_on    := false
-		bold_on      := false
-		highlight_on := false
-		underline_on := false
-		strike_on    := false
+		i_on := false
+		b_on := false
+		h_on := false
+		u_on := false
+		s_on := false
 
-		var last_italic    *inline_format
-		var last_bold      *inline_format
-		var last_highlight *inline_format
-		var last_underline *inline_format
-		var last_strike    *inline_format
+		var i_last *inline_format
+		var b_last *inline_format
+		var h_last *inline_format
+		var u_last *inline_format
+		var s_last *inline_format
 
 		// inline_balance will check against the
-		// running score of "italic_on", etc. and
+		// running score of "i_on", etc. and
 		// decide if the current format token is
 		// right
 
@@ -407,101 +420,109 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 			*string *string end string*
 			^ open  ^ open      close ^
 
-			inline_balance will decide the
-			second opener is invalid and reset
-			it to "normal" text
+			inline_balance will decide the second opener is
+			invalid and reset it to "normal" text
 
-			this is the opposite of a lot of
-			fountain parsers, which would
-			typically match the "closest
-			pair" via regex - in the
-			example above, the second
-			opener would be considered
-			the most valid one
+			this is the opposite of a lot of fountain parsers,
+			which would typically match the "closest pair"
+			via regex - in the example above, the second
+			opener would be considered the most valid one
 		*/
 
 		for _, entry := range the_list {
 			switch entry.leaf_type {
-			case ITALIC:
-				italic_on = inline_balance(entry, italic_on)
-
-			case BOLD:
-				bold_on = inline_balance(entry, bold_on)
-
-			case BOLDITALIC:
-				x := inline_balance(entry, bold_on && italic_on)
-				bold_on = x
-				italic_on = x
-
-			case HIGHLIGHT:
-				highlight_on = inline_balance(entry, highlight_on)
-
-			case UNDERLINE:
-				underline_on = inline_balance(entry, underline_on)
-
-			case STRIKEOUT:
-				strike_on = inline_balance(entry, strike_on)
-			}
-
-			// if the first switch changed any
-			// to "normal", we don't care now. we also
-			// only care if they're "openers", so
-			// is_opening would need to be true
-			if entry.leaf_type == NORMAL || !entry.is_opening {
+			case QUOTE:
+				if entry.could_open && !entry.could_close {
+					entry.text = "‘"
+				} else {
+					entry.text = "’"
+				}
+				entry.leaf_type = NORMAL
 				continue
-			}
 
-			// remember the last entry under the above
-			// conditions for future checking
-			switch entry.leaf_type {
+			case DOUBLE_QUOTE:
+				if entry.could_open && !entry.could_close {
+					entry.text = "“"
+				} else {
+					entry.text = "”"
+				}
+				entry.leaf_type = NORMAL
+				continue
+
 			case ITALIC:
-				last_italic = entry
+				i_on = inline_balance(entry, i_on)
+				if entry.is_opening {
+					i_last = entry
+					break
+				}
+				continue
 
 			case BOLD:
-				last_bold = entry
+				b_on = inline_balance(entry, b_on)
+				if entry.is_opening {
+					b_last = entry
+					break
+				}
+				continue
 
 			case BOLDITALIC:
-				last_bold = entry
-				last_italic = entry
+				x := inline_balance(entry, b_on && i_on)
+				b_on = x
+				i_on = x
+
+				if entry.is_opening {
+					b_last = entry
+					i_last = entry
+					break
+				}
+				continue
 
 			case HIGHLIGHT:
-				last_highlight = entry
+				h_on = inline_balance(entry, h_on)
+				if entry.is_opening {
+					h_last = entry
+					break
+				}
+				continue
 
 			case UNDERLINE:
-				last_underline = entry
+				u_on = inline_balance(entry, u_on)
+				if entry.is_opening {
+					u_last = entry
+					break
+				}
+				continue
 
 			case STRIKEOUT:
-				last_strike = entry
+				s_on = inline_balance(entry, s_on)
+				if entry.is_opening {
+					s_last = entry
+					break
+				}
+				continue
+
+			case NORMAL:
+				continue
 			}
 		}
 
 		// if any of these are still active come the
 		// end of the string, whoever started them is
 		// bogus and should be reset to "normal".
-		if italic_on {
-			last_italic.leaf_type = NORMAL
-		}
-		if bold_on {
-			last_bold.leaf_type = NORMAL
-		}
-		if highlight_on {
-			last_highlight.leaf_type = NORMAL
-		}
-		if underline_on {
-			last_underline.leaf_type = NORMAL
-		}
-		if strike_on {
-			last_strike.leaf_type = NORMAL
-		}
+		if i_on { i_last.leaf_type = NORMAL }
+		if b_on { b_last.leaf_type = NORMAL }
+		if h_on { h_last.leaf_type = NORMAL }
+		if u_on { u_last.leaf_type = NORMAL }
+		if s_on { s_last.leaf_type = NORMAL }
 	}
 
-	line_stack := make([]*syntax_line, 0, len(the_list)/2)
+	line_stack := make([]*syntax_line, 0, len(the_list) / 2)
 
 	{
-		x_string := strings.Builder{}
-		x_string.Grow(max_width)
+		line_buffer := strings.Builder{}
+		line_buffer.Grow(max_width)
 
-		x_length := 0
+		line_length := 0
 
 		highlight_range := make([]int, 0, 6)
 		underline_range := make([]int, 0, 6)
@@ -516,31 +537,31 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 		leaf_stack := make([]*syntax_leaf, 0, len(the_list))
 
 		for _, entry := range the_list {
-			if x_length+entry.space_width > test_width || (entry.leaf_type == NORMAL && x_length+entry.text_width > test_width) {
+			if line_length + entry.space_width > test_width || (entry.leaf_type == NORMAL && line_length + entry.text_width > test_width) {
 				// @todo long word cutting
 
 				if underline_on {
-					underline_range = append(underline_range, x_length)
+					underline_range = append(underline_range, line_length)
 				}
 				if highlight_on {
-					highlight_range = append(highlight_range, x_length)
+					highlight_range = append(highlight_range, line_length)
 				}
 				if strikeout_on {
-					strikeout_range = append(strikeout_range, x_length)
+					strikeout_range = append(strikeout_range, line_length)
 				}
 
-				x := x_string.String()
+				x := line_buffer.String()
 
 				leaf_stack = append(leaf_stack, &syntax_leaf{
 					leaf_type: NORMAL,
 					text:      x,
 				})
 
-				x_string.Reset()
-				x_string.Grow(max_width)
+				line_buffer.Reset()
+				line_buffer.Grow(max_width)
 
 				line_stack = append(line_stack, &syntax_line{
-					length:    x_length,
+					length:    line_length,
 					leaves:    leaf_stack,
 					highlight: highlight_range,
 					underline: underline_range,
@@ -569,12 +590,12 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 					strikeout_range = append(strikeout_range, 0)
 				}
 
-				x_length = 0
+				line_length = 0
 			}
 
 			if entry.space_width > 0 {
-				x_string.WriteString(strings.Repeat(" ", entry.space_width))
-				x_length += entry.space_width
+				line_buffer.WriteString(strings.Repeat(" ", entry.space_width))
+				line_length += entry.space_width
 			}
 
 			if entry.space_only {
@@ -582,8 +603,8 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 			}
 
 			if entry.leaf_type == NORMAL {
-				x_string.WriteString(entry.text)
-				x_length += entry.text_width
+				line_buffer.WriteString(entry.text)
+				line_length += entry.text_width
 				continue
 			}
 
@@ -594,20 +615,20 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 			// the preceding leaf and not
 			// dropped like everyone else
 			if entry.leaf_type == NOTE && !entry.is_opening {
-				x_string.WriteString(entry.text)
-				x_length += entry.text_width
+				line_buffer.WriteString(entry.text)
+				line_length += entry.text_width
 			}
 
 			if entry.leaf_type != UNDERLINE && entry.leaf_type != HIGHLIGHT {
-				x := x_string.String()
+				x := line_buffer.String()
 
 				leaf_stack = append(leaf_stack, &syntax_leaf{
 					leaf_type: NORMAL,
 					text:      x,
 				})
 
-				x_string.Reset()
-				x_string.Grow(max_width)
+				line_buffer.Reset()
+				line_buffer.Grow(max_width)
 			}
 
 			// hack to get notes placed correctly
@@ -617,35 +638,35 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 			// the succeeding leaf and not
 			// dropped like everyone else
 			if entry.leaf_type == NOTE && entry.is_opening {
-				x_string.WriteString(entry.text)
-				x_length += entry.text_width
+				line_buffer.WriteString(entry.text)
+				line_length += entry.text_width
 			}
 
 			switch entry.leaf_type {
 			case UNDERLINE:
 				underline_on = entry.is_opening
 				if underline_on {
-					underline_range = append(underline_range, x_length)
+					underline_range = append(underline_range, line_length)
 				} else {
-					underline_range = append(underline_range, x_length)
+					underline_range = append(underline_range, line_length)
 				}
 				continue
 
 			case HIGHLIGHT:
 				highlight_on = entry.is_opening
 				if highlight_on {
-					highlight_range = append(highlight_range, x_length)
+					highlight_range = append(highlight_range, line_length)
 				} else {
-					highlight_range = append(highlight_range, x_length)
+					highlight_range = append(highlight_range, line_length)
 				}
 				continue
 
 			case STRIKEOUT:
 				strikeout_on = entry.is_opening
 				if strikeout_on {
-					strikeout_range = append(strikeout_range, x_length)
+					strikeout_range = append(strikeout_range, line_length)
 				} else {
-					strikeout_range = append(strikeout_range, x_length)
+					strikeout_range = append(strikeout_range, line_length)
 				}
 				continue
 			}
@@ -656,8 +677,8 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 			})
 		}
 
-		if x_string.Len() > 0 {
-			x := x_string.String()
+		if line_buffer.Len() > 0 {
+			x := line_buffer.String()
 
 			leaf_stack = append(leaf_stack, &syntax_leaf{
 				leaf_type: NORMAL,
@@ -667,7 +688,7 @@ func syntax_leaf_parser(input string, max_width, para_indent int) []*syntax_line
 
 		if len(leaf_stack) > 0 {
 			line_stack = append(line_stack, &syntax_line{
-				length:    x_length,
+				length:    line_length,
 				leaves:    leaf_stack,
 				highlight: highlight_range,
 				underline: underline_range,
