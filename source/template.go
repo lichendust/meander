@@ -165,6 +165,7 @@ var template_store = map[string]*template{
 				skip:  true,
 				style: BOLD,
 			},
+			LIST: {},
 		},
 	},
 	"stageplay": {
@@ -228,6 +229,7 @@ var template_store = map[string]*template{
 				skip:  true,
 				style: BOLD,
 			},
+			LIST: {},
 		},
 	},
 	"graphicnovel": {
@@ -286,6 +288,7 @@ var template_store = map[string]*template{
 			SECTION3: {
 				style: BOLD,
 			},
+			LIST: {},
 		},
 	},
 	"manuscript": {
@@ -348,6 +351,7 @@ var template_store = map[string]*template{
 				style:       BOLD,
 				space_above: pica,
 			},
+			LIST: {},
 		},
 	},
 	"document": {
@@ -403,6 +407,7 @@ var template_store = map[string]*template{
 				style:       ITALIC | UNDERLINE,
 				space_above: pica,
 			},
+			LIST: {},
 		},
 	},
 }

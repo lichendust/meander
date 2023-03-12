@@ -340,6 +340,14 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 				})
 				continue
 
+			case '-':
+				nodes = append(nodes, &syntax_node{
+					node_type: LIST,
+					revised:   is_revised,
+					raw_text:  consume_whitespace(clean_line[1:]),
+				})
+				continue
+
 			case '@':
 				level := uint8(0)
 
