@@ -20,9 +20,10 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"bytes"
 	"strings"
+	"unicode/utf8"
 	"github.com/ledongthuc/pdf"
 )
 
@@ -36,7 +37,10 @@ func convert_pdf(config *config) {
 		return
 	}
 
-	fmt.Println(content)
+	ok = write_file(config.output_file, []byte(content))
+	if !ok {
+		eprintln("failed to write", config.output_file)
+	}
 }
 
 func melt_pdf(path string, do_raw bool) (string, bool) {
@@ -61,6 +65,9 @@ func melt_pdf(path string, do_raw bool) (string, bool) {
 
 	total_pages := r.NumPage()
 
+	buffer := strings.Builder{}
+	buffer.Grow(1024 * 1024) // 1MB
+
 	for page_index := 1; page_index <= total_pages; page_index += 1 {
 		p := r.Page(page_index)
 		if p.V.IsNull() {
@@ -72,66 +79,40 @@ func melt_pdf(path string, do_raw bool) (string, bool) {
 		var last pdf.Text
 		var last_indent float64
 
-		buffer := strings.Builder{}
-		buffer.Grow(256)
-
 		for _, text := range texts {
-			/*
-				@note @todo
+			t := text.S
 
-				meander is leaving these three-byte sequences at
-				the end of each block of text. i know it's
-				not my code doing it, so it must be gopdf
-
-				is this standard or formalised?  or do i need to
-				somehow stop it from doing that?
-
-				external testing pdfs seem not to do that
-			*/
-
-			/*if len(text.S) == 3 {
-				a := []byte(text.S)
-				b := []byte{239,191,189}
-
-				matches := true
-
-				for i, v := range a {
-					if v != b[i] {
-						matches = false
-					}
+			// @todo testing needed!
+			// gopdf seems to leave these three byte sequences
+			// on the end of any text-block change.  it's always
+			// the same sequence, so we're just finding it and
+			// skipping it.
+			if len(t) == 3 {
+				r, _ := utf8.DecodeRuneInString(t)
+				if r == 65533 {
+					continue
 				}
-
-				if matches {
-					continue main_loop
-				}
-			}*/
-
-			if text.S == "’" {
-				text.S = "'"
 			}
 
 			if last.Y == text.Y {
-				buffer.WriteString(text.S)
+				buffer.WriteString(t)
 				continue
 			}
 
 			if last.Y - text.Y <= pica * 1.5 {
 				if last_indent == text.X {
-					buffer.WriteString(text.S)
+					buffer.WriteString(t)
 					last = text
 					continue
 				}
 
-				fmt.Print(buffer.String())
-				fmt.Print("\n")
+				buffer.WriteRune('\n')
 			} else {
-				fmt.Print(buffer.String())
-				fmt.Print("\n\n")
+				buffer.WriteString("\n\n")
 			}
 
 			/*
 				@note
-
 				when we capture a word or a line, if the
 				line-break point has no trailing space,
 				we're not adding any ourselves. this means
@@ -145,12 +126,9 @@ func melt_pdf(path string, do_raw bool) (string, bool) {
 			last = text
 			last_indent = text.X
 
-			buffer.Reset()
-			buffer.Grow(256)
-
-			buffer.WriteString(text.S)
+			buffer.WriteString(t)
 		}
 	}
 
-	return "", true
+	return normalise_text(buffer.String()), true
 }
