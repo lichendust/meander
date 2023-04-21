@@ -21,6 +21,8 @@ package main
 
 import (
 	"strings"
+	"hash/fnv"
+
 	"unicode"
 	"unicode/utf8"
 )
@@ -135,7 +137,7 @@ func normalise_text(input string) string {
 
 // homogenise "Draft Date" or "draft_date" into "draftdate"
 // this helps us simplify any multi-matches in the title page
-func sanitise(input string) string {
+func homogenise(input string) string {
 	buffer := strings.Builder{}
 	buffer.Grow(len(input))
 
@@ -225,6 +227,10 @@ func rune_pair(text string, x, y rune) int {
 }
 
 func clean_string(input string) string {
+	if input == "" {
+		return ""
+	}
+
 	buffer := strings.Builder{}
 	buffer.Grow(len(input))
 
@@ -301,4 +307,13 @@ func title_case(input string) string {
 
 func space_pad_string(input string, n int) string {
 	return input + strings.Repeat(" ", n+2-count_all_runes(input))
+}
+
+func uint32_from_string(input string) uint32 {
+	if input == "" {
+		return 0
+	}
+	hash := fnv.New32a()
+	hash.Write([]byte(input))
+	return hash.Sum32()
 }

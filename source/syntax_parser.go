@@ -20,14 +20,53 @@
 package main
 
 import (
+	"time"
 	"strings"
+	"strconv"
 	"unicode"
 	"unicode/utf8"
+	"path/filepath"
+
+	lib "github.com/signintech/gopdf"
 )
 
-type fountain_content struct {
-	title map[string]string
-	nodes []*syntax_node
+type Fountain struct {
+	Meta struct {
+		Source  string       `json:"source"`
+		Version uint8        `json:"version"`
+	} `json:"meta"`
+
+	Title struct {
+		has_any   bool
+		Title     string     `json:"title,omitempty"`
+		Credit    string     `json:"credit,omitempty"`
+		Author    string     `json:"author,omitempty"`
+		Source    string     `json:"source,omitempty"`
+		Notes     string     `json:"notes,omitempty"`
+		DraftDate string     `json:"draft_date,omitempty"`
+		Copyright string     `json:"copyright,omitempty"`
+		Revision  string     `json:"revision,omitempty"`
+		Contact   string     `json:"contact,omitempty"`
+		Info      string     `json:"info,omitempty"`
+	} `json:"title"`
+
+	Characters []Character   `json:"characters,omitempty"`
+	Content    []Syntax_Node `json:"content,omitempty"`
+
+	paper    *lib.Rect
+	template *Template
+}
+
+func init_data() *Fountain {
+	data := Fountain{}
+
+	data.Meta.Source  = MEANDER
+	data.Meta.Version = 1
+
+	data.paper    = lib.PageSizeA4
+	data.template = &SCREENPLAY
+
+	return &data
 }
 
 const (
@@ -46,116 +85,109 @@ const (
 	DIALOGUE
 	LYRIC
 	TRANSITION
-	CENTERED
 	SYNOPSIS
+
+	JUSTIFY_CENTER
+	JUSTIFY_RIGHT
 
 	SECTION
 	SECTION2
 	SECTION3
+
+	TYPE_COUNT
 )
 
-type syntax_node struct {
-	node_type uint8
-	level     uint8
-	revised   bool
-	template  *template_entry
-	raw_text  string
-	lines     []*syntax_line
+type Character struct {
+	hash       uint32
+	Name       string   `json:"name"`
+	Gender     string   `json:"gender"`
+	OtherNames []string `json:"other_names,omitempty"`
+	Lines      int      `json:"lines_spoken,omitempty"`
 }
 
-func get_last_node(nodes []*syntax_node) (*syntax_node, bool) {
-	if len(nodes) > 0 {
-		return nodes[len(nodes)-1], true
-	}
-	return nil, false
+type Syntax_Node struct {
+	page   int
+	pos_x  float64
+	pos_y  float64
+	width  float64
+	height float64
+
+	visible bool
+	hash    uint32
+
+	Type    uint8   `json:"type"`
+	Level   uint8	`json:"-"`
+	Revised bool    `json:"revised,omitempty"`
+
+	Text string  `json:"text,omitempty"`
 }
 
-func is_character_train(node_type uint8) bool {
-	switch node_type {
-	case CHARACTER, PARENTHETICAL, DIALOGUE, LYRIC:
-		return true
-	}
-	return false
+type Syntax_Line struct {
+
 }
 
-func assign_dual_dialogue(original *syntax_node, nodes []*syntax_node) {
-	if original.level == 0 {
-		return
-	}
+type Syntax_Leaf struct {
 
-	if len(nodes) > 0 {
-		for i := len(nodes) - 1; i >= 0; i-- {
-			target := nodes[i]
+}
 
-			if target.node_type == CHARACTER {
-				if target.level == 1 {
-					original.level = 0 // don't set because there's already one above
-					break
-				}
-				target.level = 1
-				break
-			}
+var format_chars = map[rune]bool{
+	'*':  true,
+	'+':  true,
+	'~':  true,
+	'_':  true,
+	']':  true,
+	'[':  true,
+	'"':  true,
+	'\'': true,
+	'\\': true,
+}
 
-			if !(is_character_train(target.node_type) || target.node_type == WHITESPACE) {
-				original.level = 0 // don't set because can't have other stuff between
-				break
-			}
+const (
+	NORMAL int = 1 << iota
+	ITALIC
+	BOLD
+	BOLDITALIC
+	UNDERLINE
+	STRIKEOUT
+	HIGHLIGHT
+	NOTE
+	QUOTE
+	DOUBLE_QUOTE
+	ESCAPE
+)
+
+/*
+	path := fix_path(source_file)
+	text := ""
+
+	{
+		ok := false
+
+		if config.revision {
+			text, ok = load_file_tag(path, config.revision_tag, config.revision_system)
+		} else {
+			text, ok = load_file_normalise(path)
+		}
+
+		if !ok {
+			eprintf("%q not found", filepath.ToSlash(source_file))
+			return "", false
 		}
 	}
-}
+*/
 
-func find_title_colon(input string) (int, bool) {
-	for i, c := range input {
-		if c == '\n' {
-			return 0, false
-		}
-		if c == ':' {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
-func syntax_parser(config *config) (*fountain_content, bool) {
-	text, ok := syntax_preprocessor(config.source_file, config)
-
-	if !ok {
-		return nil, false
-	}
-
-	if text == "" {
-		return nil, false
-	}
-
-	// estimate final token count for allocation
-	token_count := 0
-
-	for _, c := range text {
-		if c == '\n' {
-			token_count += 1
-		}
-	}
-
-	// prepare the elements that make up the "content" object
-	title := make(map[string]string, 16)
-	nodes := make([]*syntax_node, 0, token_count)
-
-	first := true
-
+func syntax_parser(config *config, data *Fountain, text string) {
 	// title page mini-parser
+	first := false
+
 	for {
 		n, ok := find_title_colon(text)
-
-		// if there's no ":", we're done with the title page
 		if !ok {
 			break
 		}
 
-		// get the leading word before the ":"
-		word := text[:n]
-
-		// consume the word and colon
-		text = text[n+1:]
+		word := homogenise(text[:n])
+		text = text[n + 1:]
 
 		if config.revision && first {
 			// because of the need to always skip the diff char
@@ -167,15 +199,11 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 			first = false
 		}
 
-		word = sanitise(strings.TrimSpace(word))
+		word = homogenise(strings.TrimSpace(word))
 
-		// make a teeny buffer for reconstituting multi-line entries
-		sub_line_buffer := strings.Builder{}
-		sub_line_buffer.Grow(64)
+		title_buffer := strings.Builder{}
+		title_buffer.Grow(64)
 
-		// that "loop:" syntax in Go is too
-		// nuclear so we need a delayed
-		// nested loop break
 		break_main_loop := false
 
 		// begin parsing
@@ -184,11 +212,7 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 			line := extract_to_newline(text)
 			text = text[len(line):] // consume the line
 
-			sub_line_buffer.WriteString(strings.TrimSpace(line))
-
-			// the first character is now the newline (or eof)
-			// because "extract_to_newline" stops before the
-			// first one it finds
+			title_buffer.WriteString(strings.TrimSpace(line))
 
 			if len(text) == 0 {
 				break
@@ -206,549 +230,217 @@ func syntax_parser(config *config) (*fountain_content, bool) {
 					text = text[1:]
 				}
 
-				// this means we've hit a double newline;
-				// title pages in Fountain must be all
-				// smushed together
 				if len(text) > 0 && text[0] == '\n' {
 					break_main_loop = true
 					break
 				}
-
-				// we're now into multi-line entries
-
-				// if there's no leading space this is not a
-				// multi-line entry, so break to finish up this
-				// entry and go to the next one
-				if text[0] != ' ' {
+				if !unicode.IsSpace(rune(text[0])) {
 					break
 				}
 
-				// we know there's a leading space, we're into
-				// multi-line, so grab that line and consume
-				// it
 				sub_line := extract_to_newline(text)
 				text = text[len(sub_line):]
 
-				/*if config.revision {
+				// eat the diff char
+				if config.revision {
 					sub_line = sub_line[1:]
-				}*/
+				}
 
-				// write it into the sub_line buffer,
-				// _removing_ that leading whitespace,
-				// because we don't want it
-				sub_line_buffer.WriteRune('\n')
-				sub_line_buffer.WriteString(strings.TrimSpace(sub_line))
+				title_buffer.WriteRune('\n')
+				title_buffer.WriteString(strings.TrimSpace(sub_line))
 			}
 		}
 
-		// get the final version of the sub_line and make sure
-		// it has no leading newline (side effect of the
-		// WriteRune directly above) it's cheaper to remove
-		// here than to make a logical exception within the loop
-		sub_line := consume_whitespace(sub_line_buffer.String())
+		sub_line := consume_whitespace(title_buffer.String())
 
-		// if the entire sub_line is empty, the user didn't fill
-		// in the value so don't register it we're nice about
-		// it though, we don't write it back into their
-		// screenplay as an action
 		if sub_line != "" {
-			title[word] = sub_line
+			switch word {
+			case "format":
+				data.template = set_template(sub_line)
+			case "paper":
+				data.paper = set_paper(sub_line)
+			case "title":
+				data.Title.Title = sub_line
+				data.Title.has_any = true
+			case "credit":
+				data.Title.Credit = sub_line
+				data.Title.has_any = true
+			case "author":
+				data.Title.Author = sub_line
+				data.Title.has_any = true
+			case "source":
+				data.Title.Source = sub_line
+				data.Title.has_any = true
+			case "notes":
+				data.Title.Notes = sub_line
+				data.Title.has_any = true
+			case "draftdate":
+				data.Title.DraftDate = sub_line
+				data.Title.has_any = true
+			case "copyright":
+				data.Title.Copyright = sub_line
+				data.Title.has_any = true
+			case "revision":
+				data.Title.Revision = sub_line
+				data.Title.has_any = true
+			case "contact":
+				data.Title.Contact = sub_line
+				data.Title.has_any = true
+			case "info":
+				data.Title.Info = sub_line
+				data.Title.has_any = true
+			}
 		}
 
-		// if the inner loop detected the end
-		// of the title page, we're done here
 		if break_main_loop {
 			break
 		}
+	}
+
+	if data.Title.Title == "" {
+		data.Title.Title = filepath.Base(config.source_file)
 	}
 
 	// only remove newlines in case the first
 	// element something like indented "action".
 	text = consume_newlines(text)
 
-	for {
-		// eof
-		if len(consume_whitespace(text)) == 0 {
-			break
+	{
+		// remove boneyards in a single step:
+		// it's the only syntax that crosses a
+		// line-boundary, so we deal with it now
+
+		copy := strings.Builder{}
+		copy.Grow(len(text))
+
+		is_escaped    := false
+		eat_spaces    := false
+		eat_newlines  := false
+		newline_count := 0
+		last_rune     := '_'
+
+		for len(text) > 0 {
+			if text[0] == '\\' {
+				if is_escaped {
+					copy.WriteRune('\\')
+				}
+				is_escaped = !is_escaped
+				text = text[1:]
+				continue
+			}
+
+			if text[0] == '/' && len(text) > 1 && text[1] == '*' {
+				n := rune_pair(text[2:], '*', '/')
+
+				if n < 0 {
+					copy.WriteString("/*")
+					text = text[2:]
+					continue
+				}
+
+				parse_gender(data, text[2:n]) // (tests and performs it)
+				text = text[n + 2:]
+
+				eat_newlines = (last_rune == '\n')
+				eat_spaces   = (last_rune == ' ')
+			}
+
+			r, width := utf8.DecodeRuneInString(text)
+			text = text[width:]
+
+			last_rune = r
+
+			if r == '\n' && eat_newlines && newline_count < 2 {
+				newline_count += 1
+				continue
+			} else {
+				newline_count = 0
+				eat_newlines = false
+			}
+			if r == ' ' && eat_spaces {
+				continue
+			} else {
+				eat_spaces = false
+			}
+
+			copy.WriteRune(r)
 		}
 
-		// get the line
+		text = copy.String() // return de-boned string
+	}
+}
+
+func parse_gender(data *Fountain, text string) {
+	text = strings.TrimSpace(text)
+
+	if !(len(text) > 8) {
+		return
+	}
+	if strings.ToLower(text[:8]) != "[gender." {
+		return
+	}
+
+	if data.Characters == nil {
+		data.Characters = make([]Character, 0, count_rune(text, '\n'))
+	}
+
+	current_gender := ""
+
+	for len(text) > 0 {
 		line := extract_to_newline(text)
-		text = text[len(line):] // consume it
+		text = text[len(line):]
+		line = strings.TrimSpace(line)
+		text = consume_whitespace(text)
 
-		// remove the left-behind newline with eof safety
-		if len(text) > 0 && text[0] == '\n' {
-			text = text[1:]
-		}
-
-		is_revised := false
-		dirty_line := line
-
-		if config.revision {
-			if len(dirty_line) > 0 {
-				char := rune(dirty_line[0])
-				chop := false
-
-				switch char {
-				case '+':
-					chop = true
-					is_revised = true
-				case ' ':
-					chop = true
-				case '-', '\\':
-					continue
-				}
-
-				if chop {
-					dirty_line = dirty_line[1:]
-				}
-			}
-		}
-
-		clean_line := strings.TrimSpace(dirty_line)
-
-		// just whitespace
-		if clean_line == "" {
-			// if the last line was whitespace, level the
-			// existing one up instead of writing a new
-			// one
-			if last_node, ok := get_last_node(nodes); ok {
-				if last_node.node_type == WHITESPACE {
-					last_node.level += 1
-					continue
-				}
-			}
-
-			nodes = append(nodes, &syntax_node{
-				node_type: WHITESPACE,
-				level:     1,
-			})
+		if line == "" {
 			continue
 		}
 
-		// single characters on lines
-		// are _actions_, so don't check
-		// forces if the line is only one char.
-		if len(clean_line) > 1 {
-			// handle "forced" syntaxes
-			switch clean_line[0] {
-			case '!':
-				nodes = append(nodes, &syntax_node{
-					node_type: ACTION,
-					revised:   is_revised,
-					raw_text:  clean_line[1:],
-				})
-				continue
-
-			case '-':
-				nodes = append(nodes, &syntax_node{
-					node_type: LIST,
-					revised:   is_revised,
-					raw_text:  consume_whitespace(clean_line[1:]),
-				})
-				continue
-
-			case '@':
-				level := uint8(0)
-
-				if clean_line[len(clean_line)-1] == '^' {
-					clean_line = clean_line[:len(clean_line)-1]
-					level += 1
-				}
-
-				the_node := &syntax_node{
-					node_type: CHARACTER,
-					level:     level,
-					revised:   is_revised,
-					raw_text:  consume_whitespace(clean_line[1:]),
-				}
-
-				assign_dual_dialogue(the_node, nodes)
-
-				nodes = append(nodes, the_node)
-				continue
-
-			case '~':
-				n := count_rune(clean_line, '~')
-
-				if n == 2 {
-					break
-				}
-
-				nodes = append(nodes, &syntax_node{
-					node_type: LYRIC,
-					revised:   is_revised,
-					raw_text:  clean_line[1:],
-				})
-				continue
-
-			case '=':
-				n := count_rune(clean_line, '=')
-
-				// "===" is a page-break
-				if n >= 3 {
-					nodes = append(nodes, &syntax_node{
-						node_type: PAGE_BREAK,
-					})
-					continue
-				}
-
-				// otherwise "= words" is a synopsis
-				nodes = append(nodes, &syntax_node{
-					node_type: SYNOPSIS,
-					raw_text:  consume_whitespace(clean_line[n:]),
-				})
-				continue
-
-			// sections
-			case '#':
-				n := count_rune(clean_line, '#')
-
-				x := uint8(n) - 1
-				if x > 2 {
-					x = 2
-				} // clamp sections to 3
-
-				nodes = append(nodes, &syntax_node{
-					node_type: SECTION + x,
-					level:     x,
-					revised:   is_revised,
-					raw_text:  consume_whitespace(clean_line[n:]),
-				})
-				continue
-
-			// scenes
-			case '.':
-				// a leading stop "." forces a scene
-				// however, a leading ellipsis "...",
-				// should _not_ be considered a scene
-
-				// so we need to check(ignoring spaces) for
-				// repeating stops, for which two in
-				// sequence are _enough_.
-				if consume_whitespace(clean_line[1:])[0] == '.' {
-					break
-				}
-
-				// this is safe because of the >1 check that
-				// the entire switch is wrapped in
-				clean_line = clean_line[1:]
-
-				if scene, scene_number, ok := has_scene_number(clean_line); ok {
-					// insert cleaned scene + number
-					nodes = append(nodes, &syntax_node{
-						node_type: SCENE,
-						revised:   is_revised,
-						raw_text:  scene,
-					})
-					nodes = append(nodes, &syntax_node{
-						node_type: SCENE_NUMBER,
-						raw_text:  scene_number,
-					})
-				} else {
-					// insert just the whole line scene
-					nodes = append(nodes, &syntax_node{
-						node_type: SCENE,
-						revised:   is_revised,
-						raw_text:  consume_whitespace(clean_line),
-					})
-				}
-				continue
-
-			// parenthetical
-			case '(':
-				if clean_line[len(clean_line)-1] != ')' {
-					break // action
-				}
-
-				if last_node, ok := get_last_node(nodes); ok {
-					if !is_character_train(last_node.node_type) {
-						break // action
-					}
-				}
-
-				nodes = append(nodes, &syntax_node{
-					node_type: PARENTHETICAL,
-					revised:   is_revised,
-					raw_text:  clean_line,
-				})
-				continue
-
-			// transitions + centered
-			case '>':
-				clean_line = consume_whitespace(clean_line[1:])
-
-				// if line ends with a matching angle bracket
-				// we're a "centered" item
-				if clean_line[len(clean_line)-1] == '<' {
-					clean_line = consume_ending_whitespace(clean_line[:len(clean_line)-1])
-
-					nodes = append(nodes, &syntax_node{
-						node_type: CENTERED,
-						revised:   is_revised,
-						raw_text:  clean_line,
-					})
-					continue
-				}
-
-				nodes = append(nodes, &syntax_node{
-					node_type: TRANSITION,
-					revised:   is_revised,
-					raw_text:  clean_line,
-				})
-				continue
-
-			case '{':
-				if len(line[1:]) > 0 && line[1:][0] == '{' {
-					n := rune_pair(line[2:], '}', '}')
-
-					if n < 0 {
-						break
-					}
-
-					line = strings.TrimSpace(line[2:n])
-
-					// do line-spacing clean-up that matches
-					// preprocessor behaviour (different way of
-					// handling the subtractive newlines on
-					// notes and boneyards)
-					if len(nodes) > 0 {
-						last_node := nodes[len(nodes)-1]
-
-						if last_node.node_type == WHITESPACE {
-							for i, c := range text {
-								if i == int(last_node.level) {
-									break
-								}
-
-								if c != '\n' {
-									break
-								}
-
-								text = text[1:]
-							}
-						}
-					}
-
-					if config.revision {
-						line = line[1:]
-					}
-
-					if template, ok := macro(line, "header"); ok {
-						nodes = append(nodes, &syntax_node{
-							node_type: HEADER,
-							raw_text:  template,
-						})
-						continue
-					}
-
-					if template, ok := macro(line, "footer"); ok {
-						nodes = append(nodes, &syntax_node{
-							node_type: FOOTER,
-							raw_text:  template,
-						})
-						continue
-					}
-
-					if template, ok := macro(line, "pagenumber"); ok {
-						nodes = append(nodes, &syntax_node{
-							node_type: PAGE_NUMBER,
-							raw_text:  template,
-						})
-						continue
-					}
-
-					// we're just removing these for now because
-					// we don't handle them yet.
-					line = strings.ToLower(line)
-
-					if strings.HasPrefix(line, "toc") {
-						continue
-					}
-					if strings.HasPrefix(line, "watermark") {
-						continue
-					}
-					if strings.HasPrefix(line, "endnote") {
-						continue
-					}
-
-					// @todo this isn't all of them
-				}
+		if line[0] == '[' {
+			if line[len(line) - 1] != ']' {
+				return
 			}
-		}
 
-		// scene headings
-		if is_valid_scene(clean_line) {
-			if scene, scene_number, ok := has_scene_number(clean_line); ok {
-				// insert cleaned scene + number
-				nodes = append(nodes, &syntax_node{
-					node_type: SCENE,
-					revised:   is_revised,
-					raw_text:  scene,
-				})
-				nodes = append(nodes, &syntax_node{
-					node_type: SCENE_NUMBER,
-					raw_text:  scene_number,
-				})
-			} else {
-				// insert just the whole line scene
-				nodes = append(nodes, &syntax_node{
-					node_type: SCENE,
-					revised:   is_revised,
-					raw_text:  clean_line,
-				})
+			line = strings.ToLower(strings.TrimSpace(line[1:len(line) - 1]))
+
+			if !strings.HasPrefix(line, "gender.") {
+				return
 			}
+
+			current_gender = line[7:]
 			continue
 		}
 
-		// transitions
-		if is_valid_transition(clean_line) {
-			nodes = append(nodes, &syntax_node{
-				node_type: TRANSITION,
-				revised:   is_revised,
-				raw_text:  clean_line,
-			})
-			continue
+		names := strings.Split(line, "|")
+		for i, entry := range names {
+			names[i] = strings.TrimSpace(entry)
+		}
+		name := names[0]
+		names = names[1:]
+
+		if len(names) == 0 {
+			names = nil
 		}
 
-		// characters
-		if is_valid_character(clean_line) {
-			level := uint8(0)
-
-			if clean_line[len(clean_line)-1] == '^' {
-				clean_line = consume_ending_whitespace(clean_line[:len(clean_line)-1])
-				level += 1
-			}
-
-			the_node := &syntax_node{
-				node_type: CHARACTER,
-				level:     level,
-				revised:   is_revised,
-				raw_text:  clean_line,
-			}
-
-			assign_dual_dialogue(the_node, nodes)
-
-			nodes = append(nodes, the_node)
-			continue
-		}
-
-		// actions
-		{
-			// if we get to this point, the line is most
-			// likely just "action". however, "dialogue"
-			// is the other non-identifiable syntax,
-			// which depends on whether the previous
-			// tokens are part of a "character train"
-			// (which is "character", "dialogue" or
-			// "parenthetical")
-
-			expected_type := ACTION
-
-			// change expected type in light of a "character train".
-			if node, ok := get_last_node(nodes); ok {
-				if is_character_train(node.node_type) {
-					expected_type = DIALOGUE
-					dirty_line = clean_line
-				}
-			}
-
-			nodes = append(nodes, &syntax_node{
-				node_type: expected_type,
-				revised:   is_revised,
-				raw_text:  dirty_line,
-			})
-		}
+		data.Characters = append(data.Characters, Character{
+			hash:       uint32_from_string(name),
+			Name:       name,
+			Gender:     current_gender,
+			OtherNames: names,
+		})
 	}
-
-	nodes = syntax_validator(nodes)
-
-	return &fountain_content{
-		title: title,
-		nodes: nodes,
-	}, true
 }
 
-// post-parse clean ups and checks
-func syntax_validator(nodes []*syntax_node) []*syntax_node {
-	if len(nodes) > 0 {
-		// remove leading whitespace on file
-		if nodes[0].node_type == WHITESPACE {
-			nodes = nodes[1:]
-		}
-
-		if last_node, ok := get_last_node(nodes); ok {
-			switch last_node.node_type {
-			case WHITESPACE:
-				nodes = nodes[:len(nodes)-1]
-
-			// trailing character can't be a character
-			case CHARACTER:
-				last_node.node_type = ACTION
-			}
-		}
-
-		// reset any false positives for characters
-		for i, node := range nodes {
-			if node.node_type != CHARACTER {
-				continue
-			}
-
-			if len(nodes[i:]) > 1 {
-				forward_node := nodes[i+1]
-
-				// if two characters are back to back
-				// reset the first one
-				if forward_node.node_type == CHARACTER {
-					forward_node.node_type = DIALOGUE
-					continue
-				}
-
-				// if the lines following it are anything
-				// other than valid character/dialogue content
-				// reset it.
-				if !is_character_train(forward_node.node_type) {
-					node.node_type = ACTION
-				}
-			} else {
-				// if it's the last thing in the file
-				// reset it.
-				node.node_type = ACTION
+func consume_title_page(input string) string {
+	if n := strings.IndexRune(input, '\n'); n > -1 {
+		if is_title_element(input[:n]) {
+			if n := rune_pair(input, '\n', '\n'); n > -1 {
+				return strings.TrimSpace(input[n:])
 			}
 		}
 	}
 
-	return nodes
-}
-
-func is_valid_scene(line string) bool {
-	word := ""
-
-	for i, c := range line {
-		if c == '.' {
-			word = line[:i]
-			break
-		}
-
-		if c >= utf8.RuneSelf {
-			if unicode.IsSpace(c) {
-				word = line[:i]
-				break
-			}
-			continue
-		}
-
-		if ascii_space[c] == 1 {
-			word = line[:i]
-			break
-		}
-	}
-
-	if len(word) > 0 {
-		return valid_scene[strings.ToLower(clean_string(word))]
-	}
-
-	return false
+	return input
 }
 
 func is_valid_character(line string) bool {
@@ -805,51 +497,24 @@ func is_valid_transition(line string) bool {
 	return false
 }
 
-func has_scene_number(text string) (string, string, bool) {
-	if text[len(text)-1] == '#' {
-		n := 0
-		t := text[:len(text)-1]
-
-		for i := len(t) - 1; i > 0; i-- {
-			the_rune, _ := utf8.DecodeLastRuneInString(t[:i+1])
-
-			if unicode.IsSpace(the_rune) {
-				break
-			}
-
-			if the_rune == '#' {
-				n = i
-				break
-			}
+func find_title_colon(input string) (int, bool) {
+	for i, c := range input {
+		if c == '\n' {
+			return 0, false
 		}
-
-		if n != 0 {
-			return strings.TrimSpace(text[:n]), t[n+1:], true
+		if c == ':' {
+			return i, true
 		}
 	}
-
-	return "", "", false
+	return 0, false
 }
 
-// quickly discards the title page for included files
-func consume_title_page(input string) string {
-	if n := strings.IndexRune(input, '\n'); n > -1 {
-		if is_title_element(input[:n]) {
-			if n := rune_pair(input, '\n', '\n'); n > -1 {
-				return strings.TrimSpace(input[n:])
-			}
-		}
-	}
-	return input
-}
-
-// only used for consume title page
 func is_title_element(line string) bool {
 	found_colon := false
 
 	for i, c := range line {
 		if c == ':' {
-			line = strings.TrimSpace(sanitise(line[:i]))
+			line = strings.TrimSpace(homogenise(line[:i]))
 			found_colon = true
 			break
 		}
@@ -862,11 +527,6 @@ func is_title_element(line string) bool {
 	return false
 }
 
-// we don't actually reject any invalid keys,
-// it's just that the unsaid convention
-// among other Fountain parsers is to reject
-// the title page if the *first* entry isn't
-// a standard one.
 var valid_title_page = map[string]bool{
 	// fountain
 	"title":      true,
@@ -876,7 +536,7 @@ var valid_title_page = map[string]bool{
 	"contact":    true,
 	"revision":   true,
 	"copyright":  true,
-	"draftdate":  true, // we sanitise spaces
+	"draftdate":  true, // we homogenise spaces
 	"notes":      true,
 
 	// meander
@@ -885,4 +545,132 @@ var valid_title_page = map[string]bool{
 
 	"conttag": true,
 	"moretag": true,
+}
+
+func macro(text, keyword string) (string, bool) {
+	if strings.HasPrefix(strings.ToLower(text), keyword) {
+		for _, c := range text {
+			if c == '\n' {
+				return "", false
+			}
+		}
+
+		text = strings.TrimSpace(text[len(keyword):])
+
+		if len(text) == 0 {
+			return "", true
+		}
+
+		if text[0] == ':' {
+			text = strings.TrimSpace(text[1:])
+		} else {
+			return "", true
+		}
+
+		return strings.TrimSpace(text), true
+	}
+
+	return "", false
+}
+
+const default_timestamp = "d MMM yyyy"
+
+var ns_magic_convert = map[string]string{
+	"M":    "1",
+	"MM":   "01",
+	"MMM":  "Jan",
+	"MMMM": "January",
+	"d":    "2",
+	"dd":   "02",
+	"E":    "Mon",
+	"EEEE": "Monday",
+	"h":    "3",
+	"hh":   "03",
+	"HH":   "15",
+	"a":    "PM",
+	"m":    "4",
+	"mm":   "04",
+	"s":    "5",
+	"ss":   "05",
+	"SSS":  ".000",
+}
+
+// this conversion system obviously isn't
+// perfect, but it supports many common
+// formatters and fills in the gaps in Go's
+// magic numbers to be tighter to the base
+// Unicode spec
+func nsdate(input string) string {
+	final := strings.Builder{}
+
+	t := time.Now()
+
+	input = strings.TrimSpace(input)
+
+	for {
+		if len(input) == 0 {
+			break
+		}
+
+		for _, c := range input {
+			if unicode.IsLetter(c) {
+				n := count_rune(input, c)
+				repeat := input[:n]
+
+				// years
+				if c == 'y' {
+					switch n {
+					case 1:
+						final.WriteString(strconv.Itoa(t.Year()))
+					case 2:
+						final.WriteString(t.Format("06"))
+					default:
+						y := strconv.Itoa(t.Year())
+						final.WriteString(strings.Repeat("0", clamp(n-len(y))))
+						final.WriteString(y)
+					}
+					input = input[n:]
+					break
+				}
+
+				// H - unpadded hour
+				if c == 'H' && n == 1 {
+					final.WriteString(strconv.Itoa(t.Hour()))
+				}
+				// MMMMM - single letter month
+				if c == 'M' && n == 5 {
+					final.WriteString(t.Month().String()[:1])
+				}
+				// EEEEE - single letter week
+				if c == 'E' && n == 5 {
+					final.WriteString(t.Weekday().String()[:1])
+				}
+				// EEEEEE - two letter week
+				if c == 'E' && n == 6 {
+					final.WriteString(t.Weekday().String()[:2])
+				}
+
+				if x, ok := ns_magic_convert[repeat]; ok {
+					final.WriteString(t.Format(x))
+				} else {
+					return nsdate(default_timestamp) // just chuck the default back
+				}
+
+				input = input[n:]
+				break
+			}
+
+			final.WriteRune(c)
+			input = input[1:]
+		}
+	}
+
+	return final.String()
+}
+
+func clamp(m int) int {
+	if m < 0 {
+		return 0
+	}
+	return m
 }

@@ -39,13 +39,12 @@ func command_merge_document(config *config) {
 
 func merge(source_file string) (string, bool) {
 	text, ok := load_file(fix_path(source_file))
-
 	if !ok {
 		eprintf("%q not found", source_file)
 		return "", false
 	}
 
-	content := strings.Builder {}
+	content := strings.Builder{}
 	content.Grow(len(text))
 
 	for {
@@ -80,9 +79,7 @@ func merge(source_file string) (string, bool) {
 		}
 
 		the_rune, rune_width := utf8.DecodeRuneInString(text)
-
 		text = text[rune_width:]
-
 		content.WriteRune(the_rune)
 	}
 

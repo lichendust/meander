@@ -19,7 +19,8 @@
 
 package main
 
-const title = "Meander 0.1.0"
+const VERSION = "v0.1.0"
+const MEANDER = "Meander " + VERSION
 
 func main() {
 	config, ok := get_arguments()
@@ -28,11 +29,6 @@ func main() {
 	}
 
 	switch config.command {
-	case COMMAND_VERSION:
-		println(title)
-
-	case COMMAND_HELP:
-		command_help()
 
 	case COMMAND_RENDER:
 		command_render_document(config)
@@ -40,13 +36,27 @@ func main() {
 	case COMMAND_MERGE:
 		command_merge_document(config)
 
-	case COMMAND_JSON:
-		command_json(config)
+	case COMMAND_DATA:
+		command_data(config)
 
 	case COMMAND_GENDER:
-		command_gender_analysis(config)
+		// command_gender_analysis(config)
 
 	case COMMAND_CONVERT:
 		command_convert(config)
+	case COMMAND_VERSION:
+		println(MEANDER)
+
+	case COMMAND_HELP:
+		println(MEANDER)
+
+		args := os.Args[2:]
+
+		if len(args) == 0 {
+			println(apply_color(help("help")))
+			return
+		}
+
+		println(apply_color(help(strings.ToLower(args[0]))))
 	}
 }

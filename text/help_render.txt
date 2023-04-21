@@ -1,7 +1,7 @@
 Render will take a Fountain file and convert it to a fully formatted PDF document.
 
 $1Render Usage$0
------
+------------
 
     meander $1render$0 [input.fountain] [output.pdf] [--flags]
 

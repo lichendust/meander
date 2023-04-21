@@ -28,6 +28,6 @@ Due to the complexity of font formats and their variadic installations on differ
 
 Seeking compatible fonts and collecting the requisite style variations from alternate files is incredibly difficult without directly accessing the platform's database through a system-level API.
 
-Aside from exponentially increasing the difficulty of supporting any single platform, it would require CGo and any number of platform-level C/C++ compilers to become dependencies of Meander's compilation.  Any single C compiler is, even to the experienced, a nightmare to make play nicely with unfamiliar repositories — before we mention needing to get Go, CC/GCC and/or Windows Libraries playing nicely together, for instance.
+Aside from exponentially increasing the difficulty of supporting any single platform, it would require CGo and any number of platform-level C/C++ compilers to become dependencies of Meander's compilation.  Any single C compiler is, even to the experienced, a nightmare to make play nicely with unfamiliar repositories — before we mention needing to get Go, CC/GCC and/or various Windows libraries playing nicely together, for instance.
 
 Compiling Meander has been intentionally designed to be as simple and accessible as possible to enable anyone to recompile their own versions with personalised changes, using their own copies of the source.  Even the least technical user should meet with very little difficulty when following compilation instructions provided with the source.

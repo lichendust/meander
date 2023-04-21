@@ -19,409 +19,155 @@
 
 package main
 
-import "github.com/signintech/gopdf"
+import lib "github.com/signintech/gopdf"
 
 const (
-	font_size int = 12
+	FONT_SIZE int = 12
 
-	pica float64 = 12
-	inch float64 = 6 * pica
+	PICA float64 = 12
+	INCH float64 = 6 * PICA
 
-	line_height       = pica
-	line_height_title = pica * 1.2
+	LINE_HEIGHT = PICA
 
-	margin_top    = inch * 1.1
-	margin_left   = inch * 1.5
-	margin_right  = inch
-	margin_bottom = inch
+	MARGIN_TOP    = INCH * 1.1
+	MARGIN_LEFT   = INCH * 1.5
+	MARGIN_RIGHT  = INCH
+	MARGIN_BOTTOM = INCH
 
-	header_height = margin_top - pica * 3
-	footer_height = margin_bottom - pica * 2
-
-	// hard-coded now because we stopped
-	// supporting user font selection
-	char_width float64 = 7.188
+	MARGIN_HEADER = MARGIN_TOP    - PICA * 3
+	MARGIN_FOOTER = MARGIN_BOTTOM - PICA * 2
 )
 
-// justifications
 const (
 	LEFT uint8 = iota
 	RIGHT
 	CENTER
 )
 
-// character casing
 const (
 	NONE uint8 = iota
 	UPPERCASE
 	LOWERCASE
 )
 
-type paper struct {
-	paper_data *gopdf.Rect
-	width      float64
-	height     float64
+type Template struct {
+	SpaceAbove float64
+	SpaceBelow float64
+	LineHeight float64
+
+	TitlePageAlign uint8
+
+	AllowDual      bool
+	DualWidth      float64
+	DualCharMargin float64
+	DualParaMargin float64
+
+	Types [TYPE_COUNT]Type_Template
 }
 
-type template struct {
-	line_height_title float64
-	line_height       float64
+type Type_Template struct {
+	Skip bool
 
-	title_page_align    uint8
-	allow_dual_dialogue bool
+	Style   int     // force style override (bitwise)
+	Casing  uint8   // force upper/lower case
+	Justify uint8   // align to left or right margin
+	Margin  float64 // bump up left or right margin
 
-	look_up map[uint8]*template_entry
-}
-
-type template_entry struct {
-	skip bool // ignore in render
-
-	casing  uint8   // force upper/lower case
-	style   int     // force style override (stacks)
-	justify uint8   // align to left or right margin
-	margin  float64 // bump up left or right margin
-
-	width       float64 // max width of line wrap        (0 = ignore)
-	space_above float64 // add extra padding above
-	line_height float64 // internal wrapping override    (0 = ignore)
-	para_indent int     // add first line indentation    (0 = ignore)
+	// 0 = ignored
+	Width           float64 // max width of line wrap
+	SpaceAbove      float64 // add extra padding above
+	SpaceBelow      float64 // add extra padding below
+	LineHeight      float64 // internal wrapping override
+	ParagraphIndent int     // add first line indentation
 }
 
 
-
-// @todo hardcoded
-const (
-	dual_width       = inch * 2.5
-	dual_char_margin = inch / 2
-	dual_para_margin = inch / 2
-)
-
-var paper_store = map[string]*paper{
-	"a4": {
-		paper_data: gopdf.PageSizeA4,
-		width:      inch * 8.27,
-		height:     inch * 11.69,
-	},
-	"usletter": {
-		paper_data: gopdf.PageSizeLetter,
-		width:      inch * 8.5,
-		height:     inch * 11,
-	},
+func set_paper(text string) *lib.Rect {
+	switch homogenise(text) {
+	case "a4":
+		return lib.PageSizeA4
+	case "usletter", "letter":
+		return lib.PageSizeLetter
+	case "uslegal", "legal":
+		return lib.PageSizeLegal
+	}
+	return lib.PageSizeA4 // default
 }
 
-var template_store = map[string]*template{
-	"screenplay": {
-		line_height_title: line_height_title,
-		line_height:       line_height,
+func set_template(text string) *Template {
+	/*switch homogenise(text) {
+	case "film", "screen", "screenplay":
+		return &SCREENPLAY
+	case "stage", "play", "stageplay":
+		return &STAGEPLAY
+	}*/
+	return &SCREENPLAY // default
+}
 
-		title_page_align: CENTER,
+var SCREENPLAY = Template{
+	SpaceAbove: 0,
+	SpaceBelow: PICA,
+	LineHeight: PICA,
 
-		allow_dual_dialogue: true,
+	TitlePageAlign: CENTER,
 
-		look_up: map[uint8]*template_entry{
-			ACTION: {},
-			SCENE: {
-				casing:      UPPERCASE,
-				style:       UNDERLINE,
-				space_above: pica,
-				width:       inch * 5,
-			},
-			CHARACTER: {
-				margin: inch * 2,
-			},
-			PARENTHETICAL: {
-				margin: inch * 1.4,
-				width:  inch * 2,
-			},
-			DIALOGUE: {
-				margin: inch * 1,
-				width:  inch * 3,
-			},
-			LYRIC: {
-				margin: inch * 1,
-				width:  inch * 3,
-				style:  ITALIC,
-			},
-			TRANSITION: {
-				casing:  UPPERCASE,
-				justify: RIGHT,
-			},
-			CENTERED: {
-				justify: CENTER,
-				width:   inch * 5,
-			},
-			SYNOPSIS: {
-				skip:  true,
-				style: ITALIC,
-			},
-			SECTION: {
-				skip:        true,
-				casing:      UPPERCASE,
-				style:       BOLD | UNDERLINE,
-				space_above: pica,
-			},
-			SECTION2: {
-				skip:   true,
-				casing: UPPERCASE,
-				style:  BOLD,
-			},
-			SECTION3: {
-				skip:  true,
-				style: BOLD,
-			},
-			LIST: {
-				margin: char_width * 2,
-			},
+	AllowDual:      true,
+	DualWidth:      2.5 * INCH,
+	DualCharMargin: INCH / 2,
+	DualParaMargin: INCH / 2,
+
+	Types: [TYPE_COUNT]Type_Template{
+		SCENE: {
+			Casing:     UPPERCASE,
+			Style:      UNDERLINE,
+			SpaceAbove: PICA,
+			Width:      INCH * 5,
 		},
-	},
-	"stageplay": {
-		line_height_title: line_height_title,
-		line_height:       line_height,
-
-		title_page_align: CENTER,
-
-		allow_dual_dialogue: true,
-
-		look_up: map[uint8]*template_entry{
-			ACTION: {
-				margin: inch * 2.5,
-				width:  inch * 3.2,
-			},
-			SCENE: {
-				margin:      -inch / 4,
-				casing:      UPPERCASE,
-				style:       BOLD,
-				space_above: pica,
-				width:       inch * 5,
-			},
-			CHARACTER: {
-				margin: inch * 1.2,
-			},
-			PARENTHETICAL: {
-				margin: inch,
-				width:  inch * 2,
-			},
-			DIALOGUE: {
-				width: inch * 4.5,
-			},
-			LYRIC: {
-				width: inch * 4.5,
-				style: ITALIC,
-			},
-			TRANSITION: {
-				casing:  UPPERCASE,
-				justify: RIGHT,
-			},
-			CENTERED: {
-				justify: CENTER,
-				width:   inch * 5,
-			},
-			SYNOPSIS: {
-				skip:  true,
-				style: ITALIC,
-			},
-			SECTION: {
-				skip:        true,
-				casing:      UPPERCASE,
-				style:       BOLD | UNDERLINE,
-				space_above: pica,
-			},
-			SECTION2: {
-				skip:   true,
-				casing: UPPERCASE,
-				style:  BOLD,
-			},
-			SECTION3: {
-				skip:  true,
-				style: BOLD,
-			},
-			LIST: {
-				margin: char_width * 2,
-			},
+		CHARACTER: {
+			Margin: INCH * 2,
 		},
-	},
-	"graphicnovel": {
-		line_height_title: line_height_title,
-		line_height:       line_height,
-
-		title_page_align: CENTER,
-
-		allow_dual_dialogue: true,
-
-		look_up: map[uint8]*template_entry{
-			ACTION: {},
-			SCENE: {
-				casing:      UPPERCASE,
-				style:       UNDERLINE,
-				space_above: pica,
-				width:       inch * 5,
-			},
-			CHARACTER: {
-				margin: inch * 2,
-			},
-			PARENTHETICAL: {
-				margin: inch * 1.4,
-				width:  inch * 2,
-			},
-			DIALOGUE: {
-				margin: inch * 1,
-				width:  inch * 3,
-			},
-			LYRIC: {
-				margin: inch * 1,
-				width:  inch * 3,
-				style:  ITALIC,
-			},
-			TRANSITION: {
-				casing:  UPPERCASE,
-				justify: RIGHT,
-			},
-			CENTERED: {
-				justify: CENTER,
-				width:   inch * 5,
-			},
-			SYNOPSIS: {
-				skip:  true,
-				style: ITALIC,
-			},
-			SECTION: {
-				casing:      UPPERCASE,
-				style:       BOLD | UNDERLINE,
-				space_above: pica,
-			},
-			SECTION2: {
-				casing: UPPERCASE,
-				style:  BOLD,
-			},
-			SECTION3: {
-				style: BOLD,
-			},
-			LIST: {
-				margin: char_width * 2,
-			},
+		PARENTHETICAL: {
+			Margin: INCH * 1.4,
+			Width:  INCH * 2,
 		},
-	},
-	"manuscript": {
-		line_height_title: line_height_title,
-		line_height:       pica * 2,
-
-		title_page_align: CENTER,
-
-		allow_dual_dialogue: false,
-
-		look_up: map[uint8]*template_entry{
-			ACTION: {
-				para_indent: 4,
-			},
-			SCENE: {
-				casing:      UPPERCASE,
-				space_above: pica,
-				width:       inch * 5,
-			},
-			CHARACTER: {
-				margin: inch * 2,
-			},
-			PARENTHETICAL: {
-				margin: inch * 1.4,
-				width:  inch * 2,
-			},
-			DIALOGUE: {
-				margin: inch * 1,
-				width:  inch * 3,
-			},
-			LYRIC: {
-				margin: inch * 1,
-				width:  inch * 3,
-				style:  ITALIC,
-			},
-			TRANSITION: {
-				casing:  UPPERCASE,
-				justify: RIGHT,
-			},
-			CENTERED: {
-				justify: CENTER,
-				width:   inch * 5,
-			},
-			SYNOPSIS: {
-				skip:  true,
-				style: ITALIC,
-			},
-			SECTION: {
-				justify:     CENTER,
-				casing:      UPPERCASE,
-				style:       BOLD,
-				space_above: pica,
-			},
-			SECTION2: {
-				casing:      UPPERCASE,
-				style:       BOLD,
-				space_above: pica,
-			},
-			SECTION3: {
-				style:       BOLD,
-				space_above: pica,
-			},
-			LIST: {
-				margin: char_width * 2,
-			},
+		DIALOGUE: {
+			Margin: INCH * 1,
+			Width:  INCH * 3,
 		},
-	},
-	"document": {
-		line_height_title: line_height_title,
-		line_height:       line_height,
-
-		allow_dual_dialogue: true,
-
-		look_up: map[uint8]*template_entry{
-			ACTION: {},
-			SCENE: {
-				casing:      UPPERCASE,
-				space_above: pica,
-				width:       inch * 5,
-			},
-			CHARACTER: {
-				margin: inch * 2,
-			},
-			PARENTHETICAL: {
-				margin: inch * 1.4,
-				width:  inch * 2,
-			},
-			DIALOGUE: {
-				margin: inch * 1,
-				width:  inch * 3,
-			},
-			LYRIC: {
-				margin: inch * 1,
-				width:  inch * 3,
-				style:  ITALIC,
-			},
-			TRANSITION: {
-				casing:  UPPERCASE,
-				justify: RIGHT,
-			},
-			CENTERED: {
-				justify: CENTER,
-				width:   inch * 5,
-			},
-			SYNOPSIS: {
-				skip:  true,
-				style: ITALIC,
-			},
-			SECTION: {
-				style:       BOLD | UNDERLINE,
-				space_above: pica,
-			},
-			SECTION2: {
-				style:       UNDERLINE,
-				space_above: pica,
-			},
-			SECTION3: {
-				style:       ITALIC | UNDERLINE,
-				space_above: pica,
-			},
-			LIST: {
-				margin: char_width * 2,
-			},
+		LYRIC: {
+			Margin: INCH * 1,
+			Width:  INCH * 3,
+			Style:  ITALIC,
+		},
+		TRANSITION: {
+			Casing:  UPPERCASE,
+			Justify: RIGHT,
+		},
+		JUSTIFY_CENTER: {
+			Justify: CENTER,
+			Width:   INCH * 5,
+		},
+		SYNOPSIS: {
+			Skip:  true,
+			Style: ITALIC,
+		},
+		SECTION: {
+			Skip:       true,
+			Casing:     UPPERCASE,
+			Style:      BOLD | UNDERLINE,
+			SpaceAbove: PICA,
+		},
+		SECTION2: {
+			Skip:   true,
+			Casing: UPPERCASE,
+			Style:  BOLD,
+		},
+		SECTION3: {
+			Skip:  true,
+			Style: BOLD,
+		},
+		LIST: {
+			Margin: CHAR_WIDTH * 2,
 		},
 	},
 }

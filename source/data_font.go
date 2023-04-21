@@ -19,17 +19,18 @@
 
 package main
 
-import "bytes"
-import "github.com/signintech/gopdf"
+import (
+	"bytes"
+	"github.com/signintech/gopdf"
+	"github.com/qxoko/meander/font"
+)
 
-import "meander/font"
+const RESERVED_NAME = font.RESERVED_NAME
+const CHAR_WIDTH    = font.CHAR_WIDTH
 
-const reserved_name = font.ReservedName
-
-// attach the embedded fonts to the gopdf document
 func register_fonts(document *gopdf.GoPdf) {
-	document.AddTTFFontByReader(reserved_name, bytes.NewReader(font.Regular))
-	document.AddTTFFontByReaderWithOption(reserved_name, bytes.NewReader(font.Bold), gopdf.TtfOption{Style: gopdf.Bold})
-	document.AddTTFFontByReaderWithOption(reserved_name, bytes.NewReader(font.Italic), gopdf.TtfOption{Style: gopdf.Italic})
-	document.AddTTFFontByReaderWithOption(reserved_name, bytes.NewReader(font.BoldItalic), gopdf.TtfOption{Style: gopdf.Italic | gopdf.Bold})
+	document.AddTTFFontByReader(RESERVED_NAME, bytes.NewReader(font.Regular))
+	document.AddTTFFontByReaderWithOption(RESERVED_NAME, bytes.NewReader(font.Bold), gopdf.TtfOption{Style: gopdf.Bold})
+	document.AddTTFFontByReaderWithOption(RESERVED_NAME, bytes.NewReader(font.Italic), gopdf.TtfOption{Style: gopdf.Italic})
+	document.AddTTFFontByReaderWithOption(RESERVED_NAME, bytes.NewReader(font.BoldItalic), gopdf.TtfOption{Style: gopdf.Italic | gopdf.Bold})
 }

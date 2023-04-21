@@ -23,7 +23,7 @@ package main
 
 import "fmt"
 
-func (f *inline_format) String() string {
+/*func (f *inline_format) String() string {
 	could_open := " "
 	could_close := " "
 	is_confirmed := " "
@@ -88,7 +88,7 @@ var leaf_type_convert = map[int]string{
 	NOTE:       "<note>",
 	ESCAPE:     "<escape>",
 	// NEWLINE:    "<newline>",
-}
+}*/
 
 func debug_title_page(title map[string]string) {
 	for _, c := range debug_title_order {
@@ -111,7 +111,7 @@ var debug_title_order = []string{
 	"copyright",
 }
 
-func debug_print_screenplay(content *fountain_content) {
+/*func debug_print_screenplay(content *fountain_content) {
 	for _, node := range content.nodes {
 		fmt.Println(node)
 	}
@@ -132,4 +132,8 @@ func (node *syntax_node) String() string {
 	}
 
 	return fmt.Sprintf("%-15s%-4d|%s", kind, node.level, node.raw_text)
+}*/
+
+func (c Character) String() string {
+	return fmt.Sprintf("\n%s\n%s\n%q", c.Name, c.Gender, c.OtherNames)
 }

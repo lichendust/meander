@@ -20,11 +20,11 @@
 package main
 
 import (
-	"bytes"
-	"encoding/xml"
-	"fmt"
 	"os"
+	"fmt"
+	"bytes"
 	"strings"
+	"encoding/xml"
 )
 
 const final_draft_extension = ".fdx"

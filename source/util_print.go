@@ -23,12 +23,9 @@ import (
 	"os"
 	"fmt"
 	"strings"
+
 	"github.com/mattn/go-isatty"
 )
-
-func newline(words ...string) {
-	os.Stdout.WriteString("\n")
-}
 
 func print(words ...string) {
 	l := len(words) - 1
@@ -84,7 +81,7 @@ func init() {
 }
 
 const ansi_color_reset = "\033[0m"
-const ansi_color_accent = "\033[92m"
+const ansi_color_accent = "\033[91m"
 
 func apply_color(input string) string {
 	if running_in_term {

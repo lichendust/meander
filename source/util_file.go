@@ -26,6 +26,7 @@ import (
 )
 
 
+
 // IO
 func load_file(source_file string) (string, bool) {
 	bytes, err := os.ReadFile(source_file)

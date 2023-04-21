@@ -31,8 +31,8 @@ func command_convert(config *config) {
 	case final_draft_extension:
 		convert_final_draft(config)
 
-	case ".pdf":
-		convert_pdf(config)
+	/*case ".pdf":
+		convert_pdf(config)*/
 
 	case fountain_extension, fountain_short_ext:
 		eprintf("convert: %q is already a Fountain file", config.source_file)

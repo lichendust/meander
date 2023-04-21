@@ -2,13 +2,15 @@
 
 Meander is a tiny, single-binary, portable renderer for the production writing markup language [Fountain](https://fountain.io).
 
+![Screenshot of a computer terminal window displaying a breakdown of the lines spoken by characters in the film "Big Fish", with specific focus on their genders](images/meander_all.webp)
+
 Meander has a focus on beautiful formatting on the page, as well as being available and fully functional on as large a number of platforms as possible — most of the highly-regarded industry standard tools are prohibitively expensive simply by virtue of only being available on Apple devices.
 
 Instead, Meander lets you write wherever you like, on whatever platform you like, with any plain-text editor you like.  Or, like some of us, on a bunch of them at once.  You can install it anywhere, run it anywhere and take it anywhere, by design.  It's licensed under the GPL 3.0, to ensure it remains available and modifiable.
 
 In addition to the core Fountain specification, Meander also extends the syntax with clever and worthwhile features from other screenwriting tools, where possible or idiomatic to do so.
 
-The binaries are available from [itch.io](https://qxoko.itch.io/meander) under a "Pay What You Want" model — which includes free!
+The binaries are available from [itch.io](https://qxoko.itch.io/meander) under a 'pay what you want' model — which includes free!
 
 In spite of this quite scary table of contents, Meander is *extremely* simple to use.  There's just a lot of cool things to cover!
 
@@ -18,29 +20,28 @@ In spite of this quite scary table of contents, Meander is *extremely* simple to
 
 - [Usage](#usage)
 - [Basic Commands](#basic-commands)
-	- [Render](#render)
-	- [Merge](#merge)
-	- [Gender](#gender)
-	- [Data](#data)
-	- [Convert](#convert)
-		- [PDF Files](#pdf-files)
-		- [Final Draft Files](#final-draft-files)
-		- [Highland Files](#highland-files)
+    - [Render](#render)
+    - [Merge](#merge)
+    - [Gender](#gender)
+    - [Data](#data)
+    - [Convert](#convert)
+        - [Final Draft Files](#final-draft-files)
+        - [Highland Files](#highland-files)
 - [Render Flags](#render-flags)
-	- [Scenes](#scenes)
-	- [Formats](#formats)
-	- [Paper Sizes](#paper-sizes)
-	- [Hidden Syntaxes](#hidden-syntaxes)
+    - [Scenes](#scenes)
+    - [Formats](#formats)
+    - [Paper Sizes](#paper-sizes)
+    - [Hidden Syntaxes](#hidden-syntaxes)
 - [Syntax Extensions](#syntax-extensions)
-	- [Text Styling](#text-styling)
-	- [Directives](#directives)
-		- [Timestamps](#timestamps)
-		- [Headers / Footers](#headers--footers)
-		- [Counters](#counters)
+    - [Text Styling](#text-styling)
+    - [Directives](#directives)
+        - [Timestamps](#timestamps)
+        - [Headers / Footers](#headers--footers)
+        - [Counters](#counters)
 - [Compilation](#compilation)
 - [Experimental Features](#experimental-features)
-	- [Starred Revisions](#starred-revisions)
-	- [Language Support](#language-support)
+    - [Starred Revisions](#starred-revisions)
+    - [Language Support](#language-support)
 - [Attribution](#attribution)
 
 <!-- /MarkdownTOC -->
@@ -49,19 +50,19 @@ In spite of this quite scary table of contents, Meander is *extremely* simple to
 
 Meander is very simple to use.  Render your first screenplay with —
 
-    $ meander
+    meander
 
 If there's only one Fountain file in the working directory, Meander will just choose that one.
 
 If you're dealing with multiple files, you can specify the target file with an argument —
 
-    $ meander myfilm.fountain
+    meander myfilm.fountain
 
 It will also, regardless of where the command was run from, place the output `myfilm.pdf` alongside the original.
 
 You can then get *really* adventurous by naming the PDF file yourself —
 
-    $ meander myfilm.fountain "My Magnum Opus.pdf"
+    meander myfilm.fountain "My Magnum Opus.pdf"
 
 — though now you'll have to be explicit about where you want that PDF to go.
 
@@ -84,13 +85,13 @@ It should be noted that Meander's help command is extremely powerful and provide
 
 ### Render
 
-    $ meander render
+    meander render
 
 The default, implied option.  Creates a PDF of your input file.  See [Render Flags](#render-flags) for the myriad additional options.
 
 ### Merge
 
-    $ meander merge
+    meander merge
 
 Meander supports a multi-file workflow using a special `{{include}}` syntax.  Merging collapses your multi-file screenplay into a single text file.  The render command does this automatically, but merging allows you to output the combined plain-text.
 
@@ -106,7 +107,7 @@ Meander comes with the ability to analyse the genders of your characters, giving
 
 Calling —
 
-    $ meander gender some_film.fountain
+    meander gender some_film.fountain
 
 — will output a terminal-friendly version of the stats for that file (and its included files, if applicable).
 
@@ -114,12 +115,10 @@ Calling —
 
 The information backing this analysis comes from a custom [boneyard](https://fountain.io/syntax#section-bone) comment[^1] in the root file of your screenplay.
 
-You can put it anywhere, so if you want to shove it way down at the end, Meander doesn't mind.  If you write in more than one table, it will always use the first one in the text, and tables in included, child files will be ignored at any depth; in English, that means the table must be in the file you target with the `gender` command.
-
 ```c
 /*
     [gender.male]
-    Ashby
+    Ashby | Ashby Santoso | Captain Santoso
     Jenks
 
     [gender.female]
@@ -135,23 +134,23 @@ You can put it anywhere, so if you want to shove it way down at the end, Meander
 */
 ```
 
-Characters will be assigned the gender from the heading they reside under.  Any number of genders can be specified, useful for non-binary and queer characters, as well as for atypical instances like non-humans in science fiction.
+Characters will be assigned the gender from the heading they reside under.  Any word can used to define a gender: this means you can represent non-binary and queer characters, as well as non-humans in science fiction.  Oh and non-English writers aren't stuck with their reports saying 'Male' and 'Female'.
 
-In fact, `male` and `female` aren't programmed in literally — every gender is "custom" in Meander, so you can use whatever terms you'd like instead.
+The only reserved word is `ignore`.  Characters assigned to `ignore` will be left out of consideration in the breakdown, useful for single-appearance characters or special cases like 'the crowd' shouting back at a main player that probably shouldn't count toward any totals.
 
-The only reserved word is `ignore`.  Characters assigned to `ignore` will be left out of consideration in the breakdown, useful for single-appearance characters or special cases like "the crowd" shouting back at a main player that probably shouldn't count toward any totals.
+Any characters found in the screenplay but _not_ in the gender table will be reported as 'unknown' and classified in the statistics under that additional group.
 
-Any characters found in the screenplay but _not_ in the gender table will be reported as "unknown" and classified in the statistics under that additional group.
+Characters can also have multiple names — `Ashby` and his occasional full name `Ashby Santoso`, for example.  By writing each name in with a pipe separating them (see the table example above), all instances of the character's appearances under different names will be combined and handled as if they are one.  The report will use the *first* name provided as **the** name.
 
-Characters can also have multiple names — `Jess` and `Young Jess`, for example.  By writing each name in with a pipe separating them (see the table example above), all instances of the character's appearances under different names will be combined and handled as if they are one.  The report will use the *first* name provided as **the** name.
+Only include the actual gender data in the boneyard, with at least one `[gender.x]` header as the first non-whitespace text inside.  Whitespace, indentation and letter casings are not considered: the way the name is written in the table is how it will appear in the output.
 
-Only include the actual gender data in the boneyard, with at least one `[gender.x]` header as the first non-whitespace text inside.  Whitespace, indentation and letter casings are not considered.
+You can put the gender table anywhere, so if you want to shove it way down at the end, Meander doesn't mind.  If you supply more than one table (such as across multiple included files), those new characters will be combined.  Existing characters are not changed to prevent confusion: always define a single character in a single location.
 
 ### Data
 
 The data command generates a JSON file containing the content of and data about a given Fountain file.
 
-    $ meander data [some_film.fountain] [data.json]
+    meander data [some_film.fountain] [data.json]
 
 This is provided as a useful data exchange format.  Rather than conversion to other screenplay tools, this is intended for use with non-screenplay software, such as furnishing production-tracking tools with screenplay metadata or dumping statistics into spreadsheets.
 
@@ -164,13 +163,12 @@ The resulting JSON blob is a dictionary containing four entries:
 
 By default, the data command strips Markdown formatters like \*italics\* from the strings in the JSON file: NLEs, shot-trackers and storyboarding tools are not very likely to actually want them or know what to do with them.  However, it's not wise to assume, so Markdown formatting can be preserved with a flag —
 
-	$ meander data [some_film.fountain] --preserve-markdown
+    meander data [some_film.fountain] --preserve-markdown
 
 ### Convert
 
 Meander can also convert certain formats from other formats into plain-text —
 
-+ `.pdf` files
 + `.fdx` files from [Final Draft](https://www.finaldraft.com)
 + `.highland` files from [Highland 2](https://highland2.app)
 
@@ -181,16 +179,6 @@ $ meander convert input.fdx
 Meander will detect the input format (and report back if it doesn't know what to do with it), then output a Fountain file (or files) alongside the original with a matching file name.  You can also override the output path with another argument, as with other commands.
 
 Each of these conversions has some caveats, with some currently considered ⚠️ experimental —
-
-#### PDF Files
-
-⚠️ PDF melting is a notoriously *weird* problem.  There is no guarantee that any text is stored linearly inside the file itself.  Meander *assumes it is*, which can lead to some strange output depending on which program created the file.
-
-In trying to produce valid Fountain syntax, Meander also assumes that the input file actually looks like a screenplay.  For example, it takes into account the spacing of lines on the page to figure out if a chunk of text is dialogue or not.  This may be error prone if the spacing is unexpected or otherwise unlike a 'standard' screenplay.
-
-In the event of major issues, Meander also has a raw text extraction mode which will simply rip all text out of the file without trying to make guesses.
-
-    $ meander convert file.pdf --raw
 
 #### Final Draft Files
 
@@ -216,8 +204,8 @@ One necessity when formatting screenplays is the numbering of scenes.  In Founta
 
 However, Meander offers more options during rendering —
 
-    $ meander -s input
-    $ meander --scene input
+    meander -s input
+    meander --scene input
 
 + `input`, the default, simply takes the original `#12#` markers exactly as they are in the input files.
 + `remove` ignores all scene numbers and doesn't print them.  It's as if they never existed.
@@ -237,8 +225,8 @@ Meander also offers different formatting options.  Right now, it comes with —
 
 These formats can be specified as part of the title page, in the form `format: screenplay`, but the command line flag will take priority.
 
-    $ meander -f screenplay
-    $ meander --format screenplay
+    meander -f screenplay
+    meander --format screenplay
 
 (Although, `screenplay` is the default — you don't need to explicitly specify it anywhere).
 
@@ -251,8 +239,8 @@ Meander also supports different paper sizes:
 
 Again, the paper size may be included as part of the title page, in the same form `paper: A4`.
 
-    $ meander -p A4
-    $ meander --paper A4
+    meander -p A4
+    meander --paper A4
 
 Controversially, `A4` is the default.
 
@@ -272,7 +260,7 @@ During the creative process, printing a draft to take away and read and mull ove
 
 Running Meander with the relevant flags —
 
-    $ meander --notes --synopses --sections
+    meander --notes --synopses --sections
 
 — will ensure one (or all) get printed in distinguished colours, designed to make them obvious when reading.
 
@@ -341,7 +329,7 @@ go mod tidy
 go build -ldflags "-s -w" -trimpath ./source
 ```
 
-These commands will fetch the dependencies, which are extremely minimal (see just below) and then build the smallest possible binary.  With that, you're done.  There should be a shiny executable in the , all ready to run.
+These commands will fetch the dependencies, which are extremely minimal (see just below) and then build the smallest possible binary.  With that, you're done.  There should be a shiny executable in your repository, all ready to run.
 
 Great care has been taken to minimise the use of libraries in Meander for future-proofedness and maintainability.  We currently only rely on —
 
@@ -356,7 +344,7 @@ Using version control diffs and tags, Meander can provide starred revision featu
 
 Using tags as the historical anchor allows any number of Git/Mercurial revisions between the writer-defined screenplay revisions.  Unlike commits, tags can be moved around.
 
-    $ meander film.fountain -r <tag>
+    meander film.fountain -r <tag>
 
 This loads the Fountain files via the relevant version control tool and places stars in the margins based on the results of a diff output between the working copy and the historical tag you specify.  This means two things:
 
@@ -369,8 +357,8 @@ Meander needs no major work to support other European languages: the parser is a
 
 Automatic tags like `(more)` and `(CONT'D)` can be specified in the title page —
 
-    + `more tag: (more)`
-    + `cont tag: (CONT'D)`
++ `more tag: (more)`
++ `cont tag: (CONT'D)`
 
 Therefore... as far as Latin/European languages are concerned, Meander is fully internationalised.  We *could* extend the syntax to include non-English matches, but at the cost of compatibility with other tools.
 
@@ -386,4 +374,4 @@ The `{{include}}` syntax feature was originally from the tiny Python utility [Mo
 
 Highland would then borrow this idea, using curly braces instead.  Meander has adopted the latter for compatibility, but it still felt important to thank Mountain where they did not.
 
-[^1]: "Magic comments" are generally to be avoided, but this was intentionally designed to play nicely with other Fountain tools while ensuring the gender table can still travel with the screenplay, instead of being fed in by a separate file.
+[^1]: 'Magic comments' are generally to be avoided, but this was intentionally designed to play nicely with other Fountain tools while ensuring the gender table can still travel with the screenplay, instead of being fed in by a separate file.

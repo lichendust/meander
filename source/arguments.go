@@ -21,14 +21,14 @@ package main
 
 import (
 	"os"
-	"strings"
+	// "strings"
 )
 
 const (
 	COMMAND_RENDER uint8 = iota
 	COMMAND_MERGE
 	COMMAND_GENDER
-	COMMAND_JSON
+	COMMAND_DATA
 	COMMAND_CONVERT
 	COMMAND_HELP
 	COMMAND_VERSION
@@ -152,7 +152,7 @@ func get_arguments() (*config, bool) {
 				continue
 
 			case "data":
-				conf.command = COMMAND_JSON
+				conf.command = COMMAND_DATA
 				args = args[1:]
 				continue
 
@@ -273,7 +273,7 @@ func get_arguments() (*config, bool) {
 				has_errors = true
 			}
 			continue
-
+/*
 		case "format", "f":
 			if b != "" {
 				conf.template = strings.ToLower(b)
@@ -306,7 +306,7 @@ func get_arguments() (*config, bool) {
 				has_errors = true
 			}
 			continue
-
+*/
 		default:
 			eprintf("args: %q flag is unknown", a)
 			has_errors = true
@@ -349,7 +349,7 @@ func get_arguments() (*config, bool) {
 		case COMMAND_CONVERT:
 			conf.output_file = rewrite_ext(conf.source_file, fountain_extension)
 
-		case COMMAND_JSON:
+		case COMMAND_DATA:
 			conf.output_file = rewrite_ext(conf.source_file, ".json")
 		}
 	}
