@@ -50,18 +50,72 @@ type Fountain struct {
 		Info      string     `json:"info,omitempty"`
 	} `json:"title"`
 
-	Characters []Character   `json:"characters,omitempty"`
-	Content    []Syntax_Node `json:"content,omitempty"`
+	Characters []Character `json:"characters,omitempty"`
+	Content    []Section   `json:"content,omitempty"`
 
 	paper    *lib.Rect
 	template *Template
 }
 
+type Character struct {
+	hash       uint32
+
+	Name       string   `json:"name"`
+	Gender     string   `json:"gender"`
+	OtherNames []string `json:"other_names,omitempty"`
+	Lines      int      `json:"lines_spoken,omitempty"`
+}
+
+type Section struct {
+	page    int
+	pos_x   float64
+	pos_y   float64
+	width   float64
+	height  float64
+
+	visible bool
+	hash    uint32
+
+	Type     line_type `json:"type"`
+	Level    uint8	   `json:"-"`
+	Revision string    `json:"revision,omitempty"`
+	Text     string    `json:"text,omitempty"`
+
+	rune_length int
+	line_count  int // used to work out height
+
+	leaves []Leaf
+}
+
+type Leaf struct {
+	Type leaf_type
+	Text string
+}
+
+type Line struct {
+	style_override leaf_type
+	font_override  string
+
+	Leaves []Leaf
+}
+
+/*type Line struct {
+	length int
+
+	leaves []Syntax_Leaf
+
+	underline []int
+	strikeout []int
+	highlight []int
+
+	font_reset string
+}*/
+
 func init_data() *Fountain {
 	data := Fountain{}
 
 	data.Meta.Source  = MEANDER
-	data.Meta.Version = 1
+	data.Meta.Version = DATA_VERSION
 
 	data.paper    = lib.PageSizeA4
 	data.template = &SCREENPLAY
@@ -69,8 +123,9 @@ func init_data() *Fountain {
 	return &data
 }
 
+type line_type uint8
 const (
-	WHITESPACE uint8 = iota
+	WHITESPACE line_type = iota
 	PAGE_BREAK
 	HEADER
 	FOOTER
@@ -97,38 +152,17 @@ const (
 	TYPE_COUNT
 )
 
-type Character struct {
-	hash       uint32
-	Name       string   `json:"name"`
-	Gender     string   `json:"gender"`
-	OtherNames []string `json:"other_names,omitempty"`
-	Lines      int      `json:"lines_spoken,omitempty"`
-}
-
-type Syntax_Node struct {
-	page   int
-	pos_x  float64
-	pos_y  float64
-	width  float64
-	height float64
-
-	visible bool
-	hash    uint32
-
-	Type    uint8   `json:"type"`
-	Level   uint8	`json:"-"`
-	Revised bool    `json:"revised,omitempty"`
-
-	Text string  `json:"text,omitempty"`
-}
-
-type Syntax_Line struct {
-
-}
-
-type Syntax_Leaf struct {
-
-}
+type leaf_type int
+const (
+	NORMAL leaf_type = 1 << iota
+	ITALIC
+	BOLD
+	BOLDITALIC
+	UNDERLINE
+	STRIKEOUT
+	HIGHLIGHT
+	NOTE
+)
 
 var format_chars = map[rune]bool{
 	'*':  true,
@@ -141,20 +175,6 @@ var format_chars = map[rune]bool{
 	'\'': true,
 	'\\': true,
 }
-
-const (
-	NORMAL int = 1 << iota
-	ITALIC
-	BOLD
-	BOLDITALIC
-	UNDERLINE
-	STRIKEOUT
-	HIGHLIGHT
-	NOTE
-	QUOTE
-	DOUBLE_QUOTE
-	ESCAPE
-)
 
 /*
 	path := fix_path(source_file)
@@ -367,6 +387,47 @@ func syntax_parser(config *config, data *Fountain, text string) {
 		}
 
 		text = copy.String() // return de-boned string
+	}
+
+	for {
+		if len(consume_whitespace(text)) == 0 {
+			break
+		}
+
+		dirty_line := extract_to_newline(text)
+		text = text[len(dirty_line):]
+
+		if len(text) > 0 {
+			text = text[1:] // remove newline
+		}
+
+		is_revised := false
+		clean_line := strings.TrimSpace(dirty_line)
+
+		if clean_line == "" {
+			node, ok := get_last_node(nodes)
+
+			if ok && node.Type == WHITESPACE {
+				node.Level += 1
+			} else {
+				nodes = append(nodes, Node{
+					Type:  WHITESPACE,
+					Level: 1,
+				})
+			}
+			continue
+		}
+
+		if len(clean_line) > 0 {
+			switch clean_line[0] {
+			case '!':
+				nodes = append(nodes, Node{
+					Type:    ACTION,
+					Revised: is_revised,
+					Text:    clean_line[1:],
+				})
+			}
+		}
 	}
 }
 
@@ -673,4 +734,11 @@ func clamp(m int) int {
 		return 0
 	}
 	return m
+}
+
+func get_last_node(nodes []Node) (*Node, bool) {
+	if len(nodes) > 0 {
+		return &nodes[len(nodes) - 1], true
+	}
+	return nil, false
 }

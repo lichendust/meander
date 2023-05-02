@@ -36,15 +36,11 @@ const (
 
 	MARGIN_HEADER = MARGIN_TOP    - PICA * 3
 	MARGIN_FOOTER = MARGIN_BOTTOM - PICA * 2
-)
 
-const (
 	LEFT uint8 = iota
 	RIGHT
 	CENTER
-)
 
-const (
 	NONE uint8 = iota
 	UPPERCASE
 	LOWERCASE
@@ -80,7 +76,6 @@ type Type_Template struct {
 	LineHeight      float64 // internal wrapping override
 	ParagraphIndent int     // add first line indentation
 }
-
 
 func set_paper(text string) *lib.Rect {
 	switch homogenise(text) {

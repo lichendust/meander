@@ -22,7 +22,7 @@
 package main
 
 func help(arg string) string {
-	switch arg {
+	switch strings.ToLower(arg) {
 		case "help":
 			return `
 $1Usage$0

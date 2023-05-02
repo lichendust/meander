@@ -21,6 +21,8 @@ package main
 
 import "encoding/json"
 
+const DATA_VERSION = 1
+
 func command_data(config *config) {
 	text, ok := merge(config.source_file)
 	if !ok {

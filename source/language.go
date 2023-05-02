@@ -1,9 +1,8 @@
 package main
 
 const (
-	default_more_tag   = "(more)"
-	default_cont_tag   = "(CONT'D)"
-	default_cont_check = "(CONT"
+	default_more_tag = "(more)"
+	default_cont_tag = "(CONT'D)"
 )
 
 // all declarations in here should be lowercase

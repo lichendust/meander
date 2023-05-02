@@ -28,9 +28,7 @@ This is designed to allow consistent maintenance of the program's internal help 
 
 ### Guidelines
 
-All files are embedded as constant, raw strings in the format `comm_<filename>`, where `filename` is *sans* extension.  `comm` here is short for "communication".
-
-When creating a new file, it needs to be given a matching switch entry in `command_help` to be accessible to the user, and also be communicated in the main `help` command text in `help.txt`.
+You can freely add a new `help_*` file to reference a new topic.  The code generation allows it to seamlessly embed without any other changes.  You should, however, add a reference to it in the core `help.txt` file so users can find it.
 
 Each file can also use a set of shorthand formatters to provide colour output — `$1` and `$0`.  They are direct substitutions for ANSI escape codes, with `$1` being a hard-coded colour and `$0` clearing any effects.
 

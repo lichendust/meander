@@ -31,10 +31,10 @@ func main() {
 	switch config.command {
 
 	case COMMAND_RENDER:
-		command_render_document(config)
+		command_render(config)
 
 	case COMMAND_MERGE:
-		command_merge_document(config)
+		command_merge(config)
 
 	case COMMAND_DATA:
 		command_data(config)

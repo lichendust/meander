@@ -74,20 +74,49 @@ func eprintf(format string, guff ...any) {
 	os.Stderr.WriteString("\n")
 }
 
-var running_in_term = false
-
-func init() {
-	running_in_term = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
-}
-
-const ansi_color_reset = "\033[0m"
-const ansi_color_accent = "\033[91m"
-
 func apply_color(input string) string {
-	if running_in_term {
-		input = strings.ReplaceAll(input, "$0", ansi_color_reset)
-		input = strings.ReplaceAll(input, "$1", ansi_color_accent)
-		return input
+	const ansi_reset = "\033[0m"
+	const ansi_color = "\033[91m"
+
+	buffer := strings.Builder{}
+	buffer.Grow(len(input) + 128)
+
+	last_rune := 'x'
+
+	for {
+		if len(input) == 0 {
+			break
+		}
+
+		r, w := utf8.DecodeRuneInString(input)
+		input = input[w:]
+
+		if r == '$' {
+			last_rune = r
+			continue
+		}
+
+		if last_rune == '$' {
+			last_rune = 'x'
+
+			if r == '0' || r == '1' {
+				if !running_in_term {
+					continue
+				} else if r == '0' {
+					buffer.WriteString(ansi_reset)
+				} else {
+					buffer.WriteString(ansi_color)
+				}
+			} else {
+				buffer.WriteRune('$')
+				buffer.WriteRune(r)
+			}
+
+			continue
+		}
+
+		last_rune = r
+		buffer.WriteRune(r)
 	}
 	return strip_color(input)
 }
