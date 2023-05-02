@@ -1,4 +1,4 @@
-# Meander
+# 📝 Meander
 
 Meander is a tiny, single-binary, portable renderer for the production writing markup language [Fountain](https://fountain.io).
 
