@@ -278,6 +278,12 @@ You can also specify left, right or centre alignment by using pipe characters �
     footer: | centre only |
     footer: | left only
 
+In fact, the default header for every Meander document is defined like so —
+
+    header: | #PAGE.
+
+(See also [Counters](#counters) below.)
+
 They can also be stopped by leaving them empty —
 
     header:
