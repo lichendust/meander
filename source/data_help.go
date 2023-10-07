@@ -571,7 +571,24 @@ You can also control the positioning of elements with pipe
 characters.  Each pipe-separated section will appear on the 
 left, middle or right of the page respectively:
 
-    header: *$title* | #page.
+    header: left | centre | right
+    header: left | right
+    footer: | centre only |
+    footer: | left only
+
+Headers and footers can be entirely stopped by leaving them 
+them empty —
+
+    header:
+
+You can set a header anywhere in the text, but it will only 
+take effect on the following page: set a new header before a 
+manual page-break then.
+
+Headers and footers are also valid title page elements in 
+Meander, so if you're just setting one for the entire document, 
+feel free to set them there; useful for using the feature while 
+maintaining compatibility.
 
 $1Counters$0
 
@@ -586,8 +603,7 @@ convention —
 
     There are $1#COUNTER$0 apples in the box.
 
-You can also start or reset any counter to an arbitrary value 
-—
+You can also begin/reset any counter to an arbitrary value —
 
     #COUNTER:10
 
@@ -607,6 +623,11 @@ reset —
                 scene numbers)
 
     $1#WORDCOUNT$0  the total word count
+
+In fact, the default header in any new Meander document is 
+defined like so —
+
+    header: | #PAGE.
 `
 		case "gender":
 			return `
