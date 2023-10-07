@@ -19,10 +19,57 @@
 
 package main
 
-import (
-	"os"
-	// "strings"
-)
+import "os"
+
+const VERSION = "v0.2.0"
+const MEANDER = "Meander " + VERSION
+
+func main() {
+	config, ok := get_arguments()
+	if !ok {
+		return
+	}
+
+	switch config.command {
+	case COMMAND_RENDER:
+		command_render(config)
+
+	case COMMAND_MERGE:
+		command_merge(config)
+
+	case COMMAND_DATA:
+		command_data(config)
+
+	case COMMAND_GENDER:
+		command_gender(config)
+
+	case COMMAND_CONVERT:
+		command_convert(config)
+
+	case COMMAND_FONTS:
+		export_fonts()
+
+	case COMMAND_VERSION:
+		println(MEANDER)
+
+	case COMMAND_CREDIT:
+		println(MEANDER)
+		println(help("credit") + "\n" + LICENSE_TEXT)
+
+	case COMMAND_HELP:
+		println(MEANDER)
+
+		args := os.Args[2:]
+		if len(args) == 0 {
+			println(apply_color(help("help")))
+			return
+		}
+
+		println(apply_color(help(args[0])))
+	}
+}
+
+const FOUNTAIN_EXT = ".fountain"
 
 const (
 	COMMAND_RENDER uint8 = iota
@@ -32,60 +79,46 @@ const (
 	COMMAND_CONVERT
 	COMMAND_HELP
 	COMMAND_VERSION
+	COMMAND_CREDIT
+	COMMAND_FONTS
 )
 
-// defines how to handle scenes
 const (
-	SCENE_INPUT uint8 = iota    // use text input
-	SCENE_REMOVE                // no scene numbers
-	SCENE_GENERATE              // create new numbers
+	SCENE_INPUT uint8 = iota // use text input
+	SCENE_REMOVE             // no scene numbers
+	SCENE_GENERATE           // create new numbers
 )
 
-type version_control uint8
-const (
-	GIT version_control = iota
-	HG
-)
-
-// defaults
-const (
-	// always all lowercase
-	default_template = "screenplay"
-	default_paper    = "a4"
-
-	fountain_extension = ".fountain"
-	fountain_short_ext = ".ftn"
-)
-
-// config is the central location for all
-// user input
-type config struct {
+// config is the central location for all user input
+type Config struct {
 	command uint8
 
 	scenes     uint8
 	template   string
 	paper_size string
 
-	include_notes        bool
-	include_synopses     bool
-	include_sections     bool
-	write_gender         bool
-	include_gender       bool
-	json_keep_formatting bool
-	raw_convert          bool
-
-	revision        bool
-	revision_system version_control
-	revision_tag    string
+	include_notes     bool
+	include_synopses  bool
+	include_sections  bool
+	write_gender      bool
+	include_gender    bool
+	table_of_contents bool
+	raw_convert       bool
 
 	source_file string
 	output_file string
 }
 
-var arg_scene_type = map[string]uint8 {
-	"generate": SCENE_GENERATE,
-	"remove":   SCENE_REMOVE,
-	"input":    SCENE_INPUT,
+func arg_scene_type(x string) (uint8, bool) {
+	switch x {
+	case "generate":
+		return SCENE_GENERATE, true
+	case "remove":
+		return SCENE_REMOVE, true
+	case "input":
+		return SCENE_INPUT, true
+	}
+	return SCENE_INPUT, false
 }
 
 // extracts arguments in the array as
@@ -120,7 +153,7 @@ func pull_argument(args []string) (string, string) {
 }
 
 // process the user input
-func get_arguments() (*config, bool) {
+func get_arguments() (*Config, bool) {
 	args := os.Args[1:]
 
 	counter := 0
@@ -128,7 +161,7 @@ func get_arguments() (*config, bool) {
 
 	has_errors := false
 
-	conf := &config{}
+	conf := new(Config)
 
 	for {
 		args = args[counter:]
@@ -173,6 +206,14 @@ func get_arguments() (*config, bool) {
 			case "version":
 				conf.command = COMMAND_VERSION
 				return conf, true // exit immediately
+
+			case "credit":
+				conf.command = COMMAND_CREDIT
+				return conf, true // exit immediately
+
+			case "fonts":
+				conf.command = COMMAND_FONTS
+				return conf, true // exit immediately
 			}
 		}
 
@@ -183,43 +224,6 @@ func get_arguments() (*config, bool) {
 		switch a {
 		case "":
 			// continue to below
-
-		case "revision", "r":
-			conf.revision = true
-
-			if b != "" {
-				conf.revision_tag = b
-				counter += 1
-			} else {
-				eprintln("revision mode must have a version control tag")
-				has_errors = true
-			}
-
-			{
-				cwd := fix_path(".")
-
-				git_path, git_found := find_file_above(cwd, ".git")
-				hg_path,  hg_found  := find_file_above(cwd, ".hg")
-
-				if git_found && hg_found {
-					if len(git_path) > len(hg_path) {
-						conf.revision_system = GIT
-					} else {
-						conf.revision_system = HG
-					}
-					continue
-				} else if git_found {
-					conf.revision_system = GIT
-					continue
-				} else if hg_found {
-					conf.revision_system = HG
-					continue
-				}
-
-				eprintln("no version control system found for revision mode")
-				has_errors = true
-			}
-			continue
 
 		case "version":
 			conf.command = COMMAND_VERSION
@@ -232,11 +236,7 @@ func get_arguments() (*config, bool) {
 			conf.command = COMMAND_HELP
 			return conf, true
 
-		case "preserve-markdown":
-			conf.json_keep_formatting = true // @docs
-			continue
-
-		case "notes":
+		case "notes", "n":
 			conf.include_notes = true
 			continue
 
@@ -262,7 +262,7 @@ func get_arguments() (*config, bool) {
 
 		case "scene", "s":
 			if b != "" {
-				if x, ok := arg_scene_type[b]; ok {
+				if x, ok := arg_scene_type(b); ok {
 					conf.scenes = x
 				} else {
 					eprintf("invalid scene flag: %q", b)
@@ -273,40 +273,35 @@ func get_arguments() (*config, bool) {
 				has_errors = true
 			}
 			continue
-/*
+
 		case "format", "f":
 			if b != "" {
-				conf.template = strings.ToLower(b)
 				counter += 1
 
-				if _, ok := template_store[b]; !ok {
-					eprintf("args: %q not a template", b)
-					has_errors = true
+				if _, ok := is_valid_format(b); ok {
+					conf.template = b
+					continue
 				}
-
-			} else {
-				eprintln("args: missing format")
-				has_errors = true
 			}
+
+			eprintln("args: bad format")
+			has_errors = true
 			continue
 
 		case "paper", "p":
 			if b != "" {
-				b = strings.ToLower(b)
-
 				conf.paper_size = b
 				counter += 1
 
-				if _, ok := paper_store[b]; !ok {
-					eprintf("args: %q is not a supported paper size", b)
-					has_errors = true
+				if set_paper(conf.paper_size) != nil {
+					continue
 				}
-			} else {
-				eprintln("args: missing paper size")
-				has_errors = true
 			}
+
+			eprintln("args: bad paper size")
+			has_errors = true
 			continue
-*/
+
 		default:
 			eprintf("args: %q flag is unknown", a)
 			has_errors = true
@@ -330,25 +325,18 @@ func get_arguments() (*config, bool) {
 	}
 
 	if conf.source_file == "" {
-		if x := find_default_file(); x != "" {
-			conf.source_file = x
-		} else {
-			eprintln("args: no input file specified or detected!")
-			has_errors = true
-		}
+		eprintln("args: no input file specified or detected!")
+		has_errors = true
 	}
 
 	if conf.output_file == "" {
 		switch conf.command {
 		case COMMAND_RENDER:
 			conf.output_file = rewrite_ext(conf.source_file, ".pdf")
-
 		case COMMAND_MERGE:
-			conf.output_file = rewrite_ext(conf.source_file, "_merged.fountain")
-
+			conf.output_file = rewrite_ext(conf.source_file, "_merged" + FOUNTAIN_EXT)
 		case COMMAND_CONVERT:
-			conf.output_file = rewrite_ext(conf.source_file, fountain_extension)
-
+			conf.output_file = rewrite_ext(conf.source_file, FOUNTAIN_EXT)
 		case COMMAND_DATA:
 			conf.output_file = rewrite_ext(conf.source_file, ".json")
 		}

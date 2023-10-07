@@ -1,14 +1,8 @@
 $1Convert Usage$0
 -------------
 
-    meander $1convert$0 input_file [output]
+Experimental!
 
-Convert will take a number of other screenwriting tools' proprietary formats and (with best practices and within reason) convert them to a plain-text Fountain file.
+    meander $1convert$0 input.fdx [output]
 
-$1Supported Formats$0
------------------
-
-    Final Draft     $1.fdx$0
-    Highland 2      $1.highland$0
-
-Meander will check the input file extension to ensure the file can be handled.  This cannot be forced.
+Converts a Final Draft XML file to Fountain.

@@ -28,7 +28,7 @@ build() {
 	fi
 
 	mkdir -p "$build_dir/$name"
-	env GOOS="$1" GOARCH="$2" go build -ldflags "-s -w" -trimpath -o "$build_dir/$name/metronome$ext" ./source
+	env GOOS="$1" GOARCH="$2" go build -ldflags "-s -w" -trimpath -o "$build_dir/$name/meander$ext" ./source
 }
 
 build windows amd64
@@ -37,8 +37,6 @@ build linux   arm64
 build darwin  amd64
 build darwin  arm64
 build freebsd amd64
-build netbsd  amd64
-build openbsd amd64
 
 printf "\n[packaging]\n"
 
@@ -47,7 +45,7 @@ for f in $build_dir/*; do
 
 	echo $base
 
-	name=${base}_$version
+	name=meander_${base}_$version
 
 	cp -n license      $f/license.txt
 	cp -n readme.md    $f/readme.txt

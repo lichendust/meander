@@ -1,7 +1,7 @@
 $1Gender Usage$0
 ------------
 
-    meander $1gender$0 [input.fountain]
+    meander $1gender$0 input.fountain
 
 Gender performs simple analysis of your characters' gender identities, providing a detailed print-out of how they break down across a script.
 

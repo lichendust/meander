@@ -3,8 +3,8 @@ module github.com/qxoko/meander
 go 1.20
 
 require (
-	github.com/mattn/go-isatty v0.0.18
-	github.com/signintech/gopdf v0.16.1
+	github.com/mattn/go-isatty v0.0.19
+	github.com/signintech/gopdf v0.19.0
 )
 
 require (

@@ -22,30 +22,22 @@
 package main
 
 func help(arg string) string {
-	switch strings.ToLower(arg) {
+	switch arg {
 		case "help":
 			return `
 $1Usage$0
 -----
 
-    meander [command] [input.fountain] [output.pdf] [--flags]
+    meander [command] input.fountain [output.pdf] [--flags]
 
-Meander is designed to run as sensibly as possible with as few
+Meander is designed to run as sensibly as possible with as few 
 options as possible:
 
     + If no command is supplied, Meander will
       render a PDF
-    + If no input is supplied, Meander will look
-      for a $1.fountain$0 (or $1.ftn$0) file, giving
-      priority to ones named $1root$0, $1main$0 or $1manifest$0.
     + If no output is supplied, Meander will swap
       the extension to an appropriate one for the
       chosen command.
-
-All this means you can simply call Meander (with no arguments)
-in the same location as a single-file screenplay, making
-generic build systems for text editors extremely easy to
-configure.
 
 $1Commands$0
 --------
@@ -53,14 +45,18 @@ $1Commands$0
     $1render$0    render input file to PDF (default)
     $1gender$0    display gender analysis statistics
     $1merge$0     merge a multi-file document
+    $1data$0      create a machine-readable document
     $1convert$0   (experimental) convert from other software
     $1help$0      print this message and others
+    $1version$0   print the current version
+    $1credit$0    print the credit and legal text
+    $1fonts$0     export a copy of the bundled fonts
 
 $1Help$0
 ----
 
-Use $1meander help [command]$0 for more information on the
-above commands, but also see the additional help topics
+Use $1meander help [command]$0 for more information on the 
+above commands, but also see the additional help topics 
 available below:
 
     $1fountain$0  fountain cheat sheet
@@ -70,20 +66,27 @@ available below:
 $1Convert Usage$0
 -------------
 
-    meander $1convert$0 input_file [output]
+Experimental!
 
-Convert will take a number of other screenwriting tools' 
-proprietary formats and (with best practices and within reason)
-convert them to a plain-text Fountain file.
+    meander $1convert$0 input.fdx [output]
 
-$1Supported Formats$0
------------------
+Converts a Final Draft XML file to Fountain.
+`
+		case "credit":
+			return `
+Copyright (C) 2022-2023 Harley Denham
 
-    Final Draft     $1.fdx$0
-    Highland 2      $1.highland$0
+This program comes with ABSOLUTELY NO WARRANTY. This is free 
+software, and you are welcome to redistribute it under certain 
+conditions.
 
-Meander will check the input file extension to ensure the file 
-can be handled.  This cannot be forced.
+The full GPL v3.0 license should have been supplied with this 
+program's distribution.
+
+Meander includes bundled copies of a font family, distributed 
+and licensed under the SIL Open Font License v1.1.  These files 
+may be extracted and perused with the 'meander fonts' command, 
+and are attributed to the following authors:
 `
 		case "data":
 			return `
@@ -98,27 +101,14 @@ or dumping statistics into spreadsheets.
 $1Usage$0
 -----
 
-    meander $1data$0 input_file [output] [--flags]
-
-$1Flags$0
------
-
-    $1--preserve-markdown$0
-
-    by default, the export will strip *italic*, +highlight+,
-    etc. Markdown formatting characters.
-
-    $1--revision$0
-
-    if revision mode is enabled, a $1revised$0 value can reflect
-    in the content entries.
+    meander $1data$0 input.fountain [output] [--flags]
 
 The resulting JSON blob is a dictionary containing four entries:
 
-    + $1meta$0
-    + $1title$0
-    + $1characters$0
-    + $1content$0
+    + meta
+    + title
+    + characters
+    + content
 
 $1Meta$0
 ----
@@ -130,9 +120,7 @@ format and its structures.
 $1Title$0
 -----
 
-Title is a simple dictionary of the title page information.  
-Keys are also sanitised: a key such as $1draft date$0 will
-become $1draft_date$0.
+Title is a simple dictionary of the title page information.
 
     "title": {
         "title": "An Movie",
@@ -155,14 +143,16 @@ line-count based on the gender definition table.
                 "Captain Ashby",
             ],
             "gender": "male",
-            "lines_spoken": 168
+            "lines_spoken": 168,
         },
         {
             "name": "Rosemary",
             "gender": "female",
-            "lines_spoken": 220
+            "lines_spoken": 220,
         }
     ]
+
+
 
 $1Content$0
 -------
@@ -180,35 +170,45 @@ Content is a list of all screenplay content, tagged by type.
             "text": "Our heroes watch the sunset..."
         },
         {
+            "type": "character",
+            "text": "NARRATOR",
+        },
+        {
             "type": "dialogue",
-            "name": "NARRATOR",
-            "dialogue": [
-                "Will they find peace?",
-                "(beat)",
-                "Who can say..."
-            ]
+            "text": "Will they find peace?",
         },
         {
             "type": "page_break"
         }
     ]
 
-If run with the revision mode flag, any given entry in the data 
-may additionally contain a $1"revised": true$0 value.
-
-The type table is as follows:
+The possible types are as follows:
 
     scene
-    dialogue
     action
     centered
     transition
+
+    character      dual_character
+    parenthetical  dual_parenthetical
+    dialogue       dual_dialogue
+    lyric          dual_lyric
+
     section
     synopsis
+
+    page_break
+    whitespace
+
     header
     footer
-    page_break
-    page_number
+
+The additional "level" field will provide more context unique 
+to each type:
+
+    whitespace    number of blank lines on the page
+    section       the level of the heading (1, 2, 3)
+    dual_xxx      1 is always left, 2 is always right
 `
 		case "fountain":
 			return `
@@ -245,7 +245,7 @@ $1Scene Numbers$0
 -------------
 
 Scenes can also have manually defined scene numbers by placing 
-them between two pound signs.
+them between two pound signs:
     
     INT. HOUSE - DAY $1#1#$0
     INT. HOUSE - DAY $1#1A#$0
@@ -258,10 +258,10 @@ them between two pound signs.
 $1Action$0
 ------
 
-An Action is what Fountain calls a simple paragraph.  It is any 
-passage that isn't recognised as another element.  In Action 
-elements, Fountain respects whitespace and assumes every 
-carriage return is intentional.
+An Action is what Fountain calls a simple paragraph, or 
+basically any passage that isn't recognised as another element. 
+ In Action elements, Fountain respects whitespace and assumes 
+every carriage return is intentional.
 
 Tabs and spaces are also retained in Action elements, allowing 
 writers to indent a line.  Tabs are converted to four spaces.
@@ -473,7 +473,8 @@ be ignored, which most tools do, with the typical caveat that
 the first key must be one of the above standard ones.
 
 Meander is no different, ignoring any trailing keys that other 
-tools may implement, and indeed adds two custom ones of its own:
+tools may implement, and indeed adds several custom ones of its 
+own:
 
     Paper
     Format
@@ -481,6 +482,22 @@ tools may implement, and indeed adds two custom ones of its own:
 These allow the user to simply specify their choice of template 
 and paper size without needing to always enter it in the 
 command parameters.
+
+    Header
+    Footer
+
+The document's intended header and footer can be declared as 
+part of the title page, assuming you do not need it to change 
+throughout the document.  This is useful for compatibility with 
+other Fountain tools (or Final Draft import) while still being 
+able to use the feature.
+
+    More Tag: (more)
+    Cont Tag: (CONT'D)
+
+You can also override the (more) and (cont'd) tags used when 
+dialogue is broken across a page boundary.  You should specify 
+them inclusive of brackets.
 
 
 $1Page Breaks$0
@@ -497,7 +514,7 @@ $1Punctuation$0
 
 The core Fountain spec doesn't do any of that, because the 
 screenplay typographical convention is to emulate a typewriter. 
-However you type your apostrophes, quotes, dashes, and dots, 
+ However you type your apostrophes, quotes, dashes, and dots, 
 that's how they'll wind up in the screenplay.
 
 
@@ -526,78 +543,77 @@ Meander extends the core Fountain syntax with some of its own
 features and some borrowed from other screenwriting tools.
 
 
-$1Directives$0
-----------
-
-Meander recognises Highland 2-style directives.
+$1Modifiers$0
+---------
 
 $1Includes$0
 
-    {{include: scenes/1_02.fountain}}
+    include: scenes/01_02.fountain
 
-Includes let you...
+Include imports the contents of another file at the current 
+location.
+
+The path is always relative to the file in which the include is 
+written.
+
+$1Headers and Footers$0
+
+    header: *My Novel*
+    footer: Jannes Authorsson
+
+Meander lets you specify page headers and footers in much the 
+same way.  If you just want one consistent arrangement for the 
+entire file, you can specify the header/footer in the title 
+page.  Alternatively, they can be updated in the text using the 
+same syntax.
+
+You can also control the positioning of elements with pipe 
+characters.  Each pipe-separated section will appear on the 
+left, middle or right of the page respectively:
+
+    header: *$title* | #page.
 
 $1Counters$0
 
-    {{series}}
-    {{figure}}
-    {{chapter}}
-    {{panel}}
+Sometimes, numerical counters are useful for tracking values 
+across a screenplay, independently of say, the scene numbers or 
+the page count.
 
-Counters are substitute values that increment automatically 
-every time they are encountered.  You can set (or restart) the 
-starting value to any number like so:
+Meander's syntax for this is a pound sign $1#$0 followed by a 
+keyword of your choice.  This word should be made of only 
+letters and underscores and is written in ALL CAPS by 
+convention —
 
-    {{series: 1}}
+    There are $1#COUNTER$0 apples in the box.
 
-$1Timestamps$0
+You can also start or reset any counter to an arbitrary value 
+—
 
-    {{timestamp: dd MM yyyy}}
+    #COUNTER:10
 
-Timestamps will substitute the current date / time, helpful for 
-those of us who forget to change the dates on their drafts.  
-Timestamp uses a sensible default, but you can use a custom 
-pattern using any of the following characters:
+You can also employ alphabetical counters, by initialising them 
+with a letter —
 
-    $1Days$0
-    d       2
-    dd      02
-    E       Mon
-    EEEE    Monday
+    #COUNTER:A
 
-    $1Months$0
-    M       1
-    MM      01
-    MMM     Jan
-    MMMM    January
+There are also a small number of built-in counters that are 
+available to use.  None of these counters may be modified or 
+reset —
 
-    $1Years$0
-    y       2022
-    yy      22
+    $1#PAGE$0       the current page number.
 
-    $1Hours$0
-    h       3
-    hh      03
-    HH      15
-    a       PM
+    $1#SCENE$0      the current scene number (only
+                available when using generative
+                scene numbers)
 
-    $1Minutes$0
-    m       4
-    mm      04
-
-    $1Seconds$0
-    s       5
-    ss      05
-
-    $1Milliseconds$0
-    SSS     .000
+    $1#WORDCOUNT$0  the total word count
 `
 		case "gender":
 			return `
 $1Gender Usage$0
 ------------
 
-    meander $1gender$0 [input.fountain]
+    meander $1gender$0 input.fountain
 
 Gender performs simple analysis of your characters' gender 
 identities, providing a detailed print-out of how they break 
@@ -669,7 +685,7 @@ all subsequent output.
 $1Merge Usage$0
 -----------
 
-    meander $1merge$0 input_file [output]
+    meander $1merge$0 input.fountain [output]
 
 Merge collapses a multi-file screenplay with include directives 
 into a single text file.
@@ -679,17 +695,16 @@ a suffix to prevent clobbering the original file.  You can
 forcibly overwrite the original by manually specifing it as 
 both arguments.
 
-$1Include Directive$0
------------------
+$1Includes$0
+--------
 
-In Highland-flavoured Fountain, an include directive allows 
-linking to the contents of another file.  This allows writing a 
-film with each scene in a separate file, or a manuscript by 
-chapters.
+An include directive allows linking to the contents of another 
+file.  This allows writing a film with each scene in a separate 
+file, or a manuscript by chapters.
 
 Includes take the form:
 
-    $1{{include: some/file.fountain}}$0
+    $1include: some/file.fountain$0
 
 The path to the included file should be relative to the file in 
 which the directive is written.
@@ -707,7 +722,7 @@ formatted PDF document.
 $1Render Usage$0
 ------------
 
-    meander $1render$0 [input.fountain] [output.pdf] [--flags]
+    meander $1render$0 input.fountain [output.pdf] [--flags]
 
 The first option of any flag listed below is also the default, 
 which means it does not need to be specified unless performing 
@@ -752,14 +767,7 @@ $1Force Hidden Syntaxes$0
     $1--notes$0
     $1--synopses$0
     $1--sections$0
-
-$1Revision Mode$0
--------------
-
-Meander $1experimentally$0 supports a starred revision feature.
- It's currently based on Git tags, but this is subject to
-change.
 `
 	}
-	return "help for command not found"
+	return ""
 }

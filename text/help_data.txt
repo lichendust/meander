@@ -5,27 +5,14 @@ Rather than conversion to other screenplay tools, this is intended for use with 
 $1Usage$0
 -----
 
-    meander $1data$0 input_file [output] [--flags]
-
-$1Flags$0
------
-
-    $1--preserve-markdown$0
-
-    by default, the export will strip *italic*, +highlight+,
-    etc. Markdown formatting characters.
-
-    $1--revision$0
-
-    if revision mode is enabled, a $1revised$0 value can reflect
-    in the content entries.
+    meander $1data$0 input.fountain [output] [--flags]
 
 The resulting JSON blob is a dictionary containing four entries:
 
-    + $1meta$0
-    + $1title$0
-    + $1characters$0
-    + $1content$0
+    + meta
+    + title
+    + characters
+    + content
 
 $1Meta$0
 ----
@@ -35,7 +22,7 @@ Meta stores information about the JSON format itself — the version of Meander 
 $1Title$0
 -----
 
-Title is a simple dictionary of the title page information.  Keys are also sanitised: a key such as $1draft date$0 will become $1draft_date$0.
+Title is a simple dictionary of the title page information.
 
     "title": {
         "title": "An Movie",
@@ -56,14 +43,16 @@ Characters is a list of all speaking characters featured in the screenplay with 
                 "Captain Ashby",
             ],
             "gender": "male",
-            "lines_spoken": 168
+            "lines_spoken": 168,
         },
         {
             "name": "Rosemary",
             "gender": "female",
-            "lines_spoken": 220
+            "lines_spoken": 220,
         }
     ]
+
+
 
 $1Content$0
 -------
@@ -81,31 +70,41 @@ Content is a list of all screenplay content, tagged by type.
             "text": "Our heroes watch the sunset..."
         },
         {
+            "type": "character",
+            "text": "NARRATOR",
+        },
+        {
             "type": "dialogue",
-            "name": "NARRATOR",
-            "dialogue": [
-                "Will they find peace?",
-                "(beat)",
-                "Who can say..."
-            ]
+            "text": "Will they find peace?",
         },
         {
             "type": "page_break"
         }
     ]
 
-If run with the revision mode flag, any given entry in the data may additionally contain a $1"revised": true$0 value.
-
-The type table is as follows:
+The possible types are as follows:
 
     scene
-    dialogue
     action
     centered
     transition
+
+    character      dual_character
+    parenthetical  dual_parenthetical
+    dialogue       dual_dialogue
+    lyric          dual_lyric
+
     section
     synopsis
+
+    page_break
+    whitespace
+
     header
     footer
-    page_break
-    page_number
+
+The additional "level" field will provide more context unique to each type:
+
+    whitespace    number of blank lines on the page
+    section       the level of the heading (1, 2, 3)
+    dual_xxx      1 is always left, 2 is always right

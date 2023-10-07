@@ -1,0 +1,7 @@
+Copyright (C) 2022-2023 Harley Denham
+
+This program comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it under certain conditions.
+
+The full GPL v3.0 license should have been supplied with this program's distribution.
+
+Meander includes bundled copies of a font family, distributed and licensed under the SIL Open Font License v1.1.  These files may be extracted and perused with the 'meander fonts' command, and are attributed to the following authors:

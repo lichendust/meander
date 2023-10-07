@@ -24,7 +24,7 @@ Unconventional scene headings can also be forced by leading them with a single f
 $1Scene Numbers$0
 -------------
 
-Scenes can also have manually defined scene numbers by placing them between two pound signs.
+Scenes can also have manually defined scene numbers by placing them between two pound signs:
     
     INT. HOUSE - DAY $1#1#$0
     INT. HOUSE - DAY $1#1A#$0
@@ -37,7 +37,7 @@ Scenes can also have manually defined scene numbers by placing them between two 
 $1Action$0
 ------
 
-An Action is what Fountain calls a simple paragraph.  It is any passage that isn't recognised as another element.  In Action elements, Fountain respects whitespace and assumes every carriage return is intentional.
+An Action is what Fountain calls a simple paragraph, or basically any passage that isn't recognised as another element.  In Action elements, Fountain respects whitespace and assumes every carriage return is intentional.
 
 Tabs and spaces are also retained in Action elements, allowing writers to indent a line.  Tabs are converted to four spaces.
 
@@ -215,12 +215,22 @@ In Meander, the following keys are respected:
 
 The Fountain specification also calls for unrecognised keys to be ignored, which most tools do, with the typical caveat that the first key must be one of the above standard ones.
 
-Meander is no different, ignoring any trailing keys that other tools may implement, and indeed adds two custom ones of its own:
+Meander is no different, ignoring any trailing keys that other tools may implement, and indeed adds several custom ones of its own:
 
     Paper
     Format
 
 These allow the user to simply specify their choice of template and paper size without needing to always enter it in the command parameters.
+
+    Header
+    Footer
+
+The document's intended header and footer can be declared as part of the title page, assuming you do not need it to change throughout the document.  This is useful for compatibility with other Fountain tools (or Final Draft import) while still being able to use the feature.
+
+    More Tag: (more)
+    Cont Tag: (CONT'D)
+
+You can also override the (more) and (cont'd) tags used when dialogue is broken across a page boundary.  You should specify them inclusive of brackets.
 
 
 $1Page Breaks$0
@@ -234,7 +244,7 @@ Page Breaks are indicated by a line containing three or more consecutive equals 
 $1Punctuation$0
 -----------
 
-The core Fountain spec doesn't do any of that, because the screenplay typographical convention is to emulate a typewriter. However you type your apostrophes, quotes, dashes, and dots, that's how they'll wind up in the screenplay.
+The core Fountain spec doesn't do any of that, because the screenplay typographical convention is to emulate a typewriter.  However you type your apostrophes, quotes, dashes, and dots, that's how they'll wind up in the screenplay.
 
 
 $1Indentation$0
@@ -257,64 +267,65 @@ $1Meander's Syntax Extensions$0
 Meander extends the core Fountain syntax with some of its own features and some borrowed from other screenwriting tools.
 
 
-$1Directives$0
-----------
-
-Meander recognises Highland 2-style directives.
+$1Modifiers$0
+---------
 
 $1Includes$0
 
-    {{include: scenes/1_02.fountain}}
+    include: scenes/01_02.fountain
 
-Includes let you...
+Include imports the contents of another file at the current location.
+
+The path is always relative to the file in which the include is written.
+
+$1Headers and Footers$0
+
+    header: *My Novel*
+    footer: Jannes Authorsson
+
+Meander lets you specify page headers and footers in much the same way.  If you just want one consistent arrangement for the entire file, you can specify the header/footer in the title page.  Alternatively, they can be updated in the text using the same syntax.
+
+You can also control the positioning of elements with pipe characters.  Each pipe-separated section will appear on the left, middle or right of the page respectively:
+
+    header: left | centre | right
+    header: left | right
+    footer: | centre only |
+    footer: | left only
+
+Headers and footers can be entirely stopped by leaving them them empty —
+
+    header:
+
+You can set a header anywhere in the text, but it will only take effect on the following page: set a new header before a manual page-break then.
+
+Headers and footers are also valid title page elements in Meander, so if you're just setting one for the entire document, feel free to set them there; useful for using the feature while maintaining compatibility.
 
 $1Counters$0
 
-    {{series}}
-    {{figure}}
-    {{chapter}}
-    {{panel}}
+Sometimes, numerical counters are useful for tracking values across a screenplay, independently of say, the scene numbers or the page count.
 
-Counters are substitute values that increment automatically every time they are encountered.  You can set (or restart) the starting value to any number like so:
+Meander's syntax for this is a pound sign $1#$0 followed by a keyword of your choice.  This word should be made of only letters and underscores and is written in ALL CAPS by convention —
 
-    {{series: 1}}
+    There are $1#COUNTER$0 apples in the box.
 
-$1Timestamps$0
+You can also begin/reset any counter to an arbitrary value —
 
-    {{timestamp: dd MM yyyy}}
+    #COUNTER:10
 
-Timestamps will substitute the current date / time, helpful for those of us who forget to change the dates on their drafts.  Timestamp uses a sensible default, but you can use a custom pattern using any of the following characters:
+You can also employ alphabetical counters, by initialising them with a letter —
 
-    $1Days$0
-    d       2
-    dd      02
-    E       Mon
-    EEEE    Monday
+    #COUNTER:A
 
-    $1Months$0
-    M       1
-    MM      01
-    MMM     Jan
-    MMMM    January
+There are also a small number of built-in counters that are available to use.  None of these counters may be modified or reset —
 
-    $1Years$0
-    y       2022
-    yy      22
+    $1#PAGE$0       the current page number.
 
-    $1Hours$0
-    h       3
-    hh      03
-    HH      15
-    a       PM
+    $1#SCENE$0      the current scene number (only
+                available when using generative
+                scene numbers)
 
-    $1Minutes$0
-    m       4
-    mm      04
+    $1#WORDCOUNT$0  the total word count
 
-    $1Seconds$0
-    s       5
-    ss      05
+In fact, the default header in any new Meander document is defined like so —
 
-    $1Milliseconds$0
-    SSS     .000
-
+    header: | #PAGE.
