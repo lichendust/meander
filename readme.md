@@ -8,7 +8,13 @@ Meander has a focus on beautiful formatting on the page, as well as being availa
 
 Instead, Meander lets you write wherever you like, on whatever platform you like, with any plain-text editor you like.  Or, like some of us, on a bunch of them at once.  You can install it anywhere, run it anywhere and take it anywhere, by design.  It's licensed under the GPL 3.0, to ensure it remains available and modifiable.
 
-In addition to the core Fountain specification, Meander extends the syntax with simple, clever and worthwhile features to make it more powerful.
+Building on top of Fountain, Meander can create all sorts of production documents, including —
+
+- Screenplays
+- Stageplays
+- Novel Manuscripts
+
+Meander also extends the core syntax with simple, clever and worthwhile features to make it more powerful.
 
 You can [download Meander from itch.io](https://qxoko.itch.io/meander) under a 'pay what you want' model, which includes free.
 
