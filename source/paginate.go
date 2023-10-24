@@ -92,7 +92,7 @@ func paginate(config *Config, data *Fountain) {
 
 		if section.Type == SCENE && config.scenes == SCENE_GENERATE {
 			data.counter_lookup["scene"].value += 1
-			section.SceneNumber = fmt.Sprintf("%d", data.counter_lookup["scene"])
+			section.SceneNumber = fmt.Sprintf("%d", data.counter_lookup["scene"].value)
 		}
 
 		t := template.types[section.Type]
