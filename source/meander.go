@@ -21,7 +21,7 @@ package main
 
 import "os"
 
-const VERSION = "v0.2.0"
+const VERSION = "v0.2.1"
 const MEANDER = "Meander " + VERSION
 
 func main() {
