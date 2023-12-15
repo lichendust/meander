@@ -188,9 +188,8 @@ func convert_final_draft(config *Config) {
 			}
 
 			if has_text {
-				buffer.WriteString("\n{{header:")
+				buffer.WriteString("\nheader: ")
 				buffer.WriteString(write_chunks(paragraph.Chunks, false))
-				buffer.WriteString("}}")
 			}
 		}
 
@@ -205,9 +204,8 @@ func convert_final_draft(config *Config) {
 			}
 
 			if has_text {
-				buffer.WriteString("\n{{footer:")
+				buffer.WriteString("\nfooter: ")
 				buffer.WriteString(write_chunks(paragraph.Chunks, false))
-				buffer.WriteString("}}")
 			}
 		}
 	}
@@ -273,6 +271,8 @@ func convert_final_draft(config *Config) {
 		}
 	}
 
+	buffer.WriteRune('\n')
+
 	success := write_file(fix_path(config.output_file), []byte(buffer.String()))
 	if !success {
 		eprintln("failed to write", config.output_file)
@@ -312,16 +312,15 @@ func write_chunks(input []*XML_Chunk, force_uppercase bool) string {
 					opening = opening + x
 					closing = x + closing
 				}
-				// println("debug: missed a final draft thing", s)
 			}
 		}
 
 		if len(chunk.Label) != 0 {
 			switch chunk.Label {
 			case "Page #":
-				buffer.WriteString("%p")
+				buffer.WriteString("#PAGE")
 			case "Last Revised":
-				buffer.WriteString("{{timestamp}}")
+				buffer.WriteString("$date") // @todo
 			}
 			continue
 		}

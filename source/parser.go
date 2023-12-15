@@ -688,7 +688,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 		}
 
 		if node.Type == CHARACTER {
-			if i < len(nodes) {
+			if i < len(nodes) - 1 {
 				if !is_character_train(nodes[i + 1].Type) {
 					node.Type = ACTION
 					continue
