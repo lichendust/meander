@@ -95,6 +95,13 @@ func paginate(config *Config, data *Fountain) {
 			section.SceneNumber = fmt.Sprintf("%d", data.counter_lookup["scene"].value)
 		}
 
+		// we adjust this here so the raw data struct
+		// stays clean and free of strange section levels
+		// for other commands
+		if section.Type == SECTION {
+			section.Type += Line_Type(section.Level - 1)
+		}
+
 		t := template.types[section.Type]
 
 		section.skip = t.skip
@@ -123,13 +130,6 @@ func paginate(config *Config, data *Fountain) {
 				delayed_page_number = false
 				data.counter_lookup["page"].value = page_number
 			}
-		}
-
-		// we adjust this here so the raw data struct
-		// stays clean and free of strange section levels
-		// for other commands
-		if section.Type == SECTION {
-			section.Type += Line_Type(section.Level - 1)
 		}
 
 		if section.Type >= is_printable {
@@ -170,8 +170,8 @@ func paginate(config *Config, data *Fountain) {
 			section.lines = break_section(data, section, t.width, t.para_indent, t.style != NORMAL)
 
 			if t.trail_height > 0 && running_height >= max_page_height - t.trail_height {
-				running_height = MARGIN_TOP
-				page_number += 1
+				new_page()
+				first_on_page = false
 
 				if inside_dual_dialogue == 2 {
 					delayed_page_number = false
