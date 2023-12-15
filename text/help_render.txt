@@ -31,8 +31,9 @@ $1Paper Size$0
 
     $1--paper -p$0      (or title page) $1paper: A4$0
 
+    US Letter
+    US Legal
     A4
-    USLetter
 
 Note that for maximum compatibility, "paper" and "format" should *not* be the first entries in the title page.  Most parsers will reject the entire title page if the first entry is unknown to them, but will quietly skip later ones.  This is never a guarantee, but it may be useful.
 

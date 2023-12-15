@@ -11,9 +11,9 @@ rm -rf $build_dir/*
 printf "[building]\n"
 
 build() {
-	echo "$1 $2"
 	name="$1_$2"
 	ext=""
+	echo $name
 
 	if [ $1 = 'darwin' ]; then
 		name="macos_"
