@@ -91,13 +91,15 @@ The default, implied option.  Creates a PDF of your input file.  See [Render Fla
 
 ### Merge
 
-    meander merge
+    meander merge source.fountain [output.fountain]
 
-Meander supports a multi-file workflow.  Merging collapses your multi-file screenplay into a single text file.  The render command does this automatically, but merging allows you to output the combined plain-text.
+Meander supports a multi-file workflow.  Merging collapses your multi-file screenplay into a single text file.  The render command does this automatically, but merging allows you to output the combined plain-text as needed.
+
+You'll need to use the `include` syntax in your screenplay to insert another file —
 
     include: scenes/some_file.fountain
 
-Included paths are always relative to the file in which they're written.
+Included paths are *always* relative to the file in which they're written.
 
 ### Gender
 
@@ -314,7 +316,7 @@ You can also employ alphabetical counters, by initialising them with a letter �
 
     #COUNTER:A
 
-> You cannot change a counter's type after it has begun.
+> Note: you cannot change a counter's type after it has begun.
 
 There are also a small number of built-in counters that are available to use.  None of these counters may be modified or reset —
 
@@ -380,7 +382,7 @@ go tool dist list
 
 ## Editor Support
 
-While there are several generic packages available for screenwriting with Fountain available for most text editors, I have built first party support for Meander, its syntax and a number of extra tools into a [Sublime Text package](https://github.com/qxoko/meander-sublime).
+While there are several generic packages available for screenwriting with Fountain available for most text editors, I have built first-party support for Meander, its syntax and a number of extra tools into a [Sublime Text package](https://github.com/qxoko/meander-sublime).
 
 Meander for Sublime Text should also be treated as a reference implementation for other packages and further text editor support.
 
