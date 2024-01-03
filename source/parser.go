@@ -628,11 +628,13 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 						clean_line = left_trim(clean_line[n + 1:])
 					}
 
-					nodes = append(nodes, Section{
-						Type: the_type,
-						Text: clean_line,
-					})
-					continue
+					if the_type != ACTION {
+						nodes = append(nodes, Section{
+							Type: the_type,
+							Text: clean_line,
+						})
+						continue
+					}
 				}
 			}
 
