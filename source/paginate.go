@@ -61,22 +61,21 @@ func paginate(config *Config, data *Fountain) {
 	original_content := data.Content
 	data.Content = make([]Section, 0, len(data.Content))
 
+	data.counter_lookup["page"] = &Counter{COUNTER, 1}
+
 	var last_char *Section
 
 	new_page := func() {
-		if inside_dual_dialogue != 2 {
-			do_header(data, data.footer, FOOTER, page_number)
-		}
+		do_header(data, data.footer, FOOTER, page_number)
 
+		old_running_height = MARGIN_TOP
 		running_height = MARGIN_TOP
 		page_number += 1
 		first_on_page = true
 
-		data.counter_lookup["page"] = &Counter{COUNTER, page_number}
+		data.counter_lookup["page"].value = page_number
 
-		if inside_dual_dialogue != 2 {
-			do_header(data, data.header, HEADER, page_number)
-		}
+		do_header(data, data.header, HEADER, page_number)
 	}
 
 	// initial header/footer, if any
@@ -88,6 +87,23 @@ func paginate(config *Config, data *Fountain) {
 
 		if section.Type == WHITESPACE && inside_dual_dialogue == 1 {
 			continue
+		}
+
+		// might be too aggressive
+		if inside_dual_dialogue == 2 && section.Type == WHITESPACE || section.Level == 0 {
+			inside_dual_dialogue = 0
+
+			if running_height < old_running_height {
+				running_height = old_running_height
+			}
+
+			old_running_height = 0
+
+			if delayed_page_number {
+				page_number += 1
+				delayed_page_number = false
+				data.counter_lookup["page"].value = page_number
+			}
 		}
 
 		if section.Type == SCENE && config.scenes == SCENE_GENERATE {
@@ -112,23 +128,6 @@ func paginate(config *Config, data *Fountain) {
 			if inside_dual_dialogue == 2 {
 				delayed_page_number = false
 				first_on_page = false
-			}
-		}
-
-		// might be too aggressive
-		if inside_dual_dialogue == 2 && section.Type == WHITESPACE || section.Level == 0 {
-			inside_dual_dialogue = 0
-
-			if running_height < old_running_height {
-				running_height = old_running_height
-			}
-
-			old_running_height = 0
-
-			if delayed_page_number {
-				page_number += 1
-				delayed_page_number = false
-				data.counter_lookup["page"].value = page_number
 			}
 		}
 
@@ -206,7 +205,7 @@ func paginate(config *Config, data *Fountain) {
 					}
 				}
 
-				if page_break_length > 0 && page_break_length != len(section.lines) {
+				if page_break_length > 0 && page_break_length < len(section.lines) {
 					copy_section := *section
 					copy_section.lines = section.lines[:page_break_length]
 					data.Content = append(data.Content, copy_section)

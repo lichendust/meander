@@ -180,6 +180,7 @@ const (
 	ACTION
 	SCENE
 
+	begin_character
 	CHARACTER
 	DUAL_CHARACTER
 	PARENTHETICAL
@@ -188,6 +189,7 @@ const (
 	DUAL_DIALOGUE
 	LYRIC
 	DUAL_LYRIC
+	end_character
 
 	TRANSITION
 	SYNOPSIS
@@ -689,7 +691,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 			any_visible = true
 		}
 
-		if node.Type == CHARACTER {
+		if node.Type == CHARACTER || node.Type == DUAL_CHARACTER {
 			if i < len(nodes) - 1 {
 				if !is_character_train(nodes[i + 1].Type) {
 					node.Type = ACTION
@@ -701,7 +703,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 			}
 
 			if node.Level == 1 {
-				if last_char.Level == 2 || any_visible {
+				if last_char == nil || last_char.Level == 2 || any_visible {
 					node.Level = 0
 				} else if last_char.Level == 0 {
 					last_char.Level = 1
@@ -1059,11 +1061,7 @@ func get_scene_number(text string) (string, string, bool) {
 }
 
 func is_character_train(node_type Line_Type) bool {
-	switch node_type {
-	case CHARACTER, PARENTHETICAL, DIALOGUE, LYRIC:
-		return true
-	}
-	return false
+	return node_type > begin_character && node_type < end_character
 }
 
 func is_valid_scene(line string) bool {
