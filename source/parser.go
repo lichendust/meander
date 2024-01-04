@@ -201,7 +201,7 @@ const (
 	SECTION2
 	SECTION3
 
-	TYPE_COUNT // used to set array lengths
+	TYPE_COUNT
 )
 
 func (x Line_Type) MarshalJSON() ([]byte, error) {
@@ -1118,9 +1118,9 @@ func copy_without_style(incoming Section) Section {
 	return incoming
 }
 
-const LINE_TYPE_NAMES = "whitespacepage_breakheaderfooteris_printableactionscenecharacterdual_characterparentheticaldual_parentheticaldialoguedual_dialoguelyricdual_lyrictransitionsynopsiscenteredis_sectionsectionsection2section3type_count"
+const LINE_TYPE_NAMES = "whitespacepage_breakheaderfooteris_printableactionscenebegin_charactercharacterdual_characterparentheticaldual_parentheticaldialoguedual_dialoguelyricdual_lyricend_charactertransitionsynopsiscenteredis_sectionsectionsection2section3type_count"
 
-var LINE_TYPE_INDICES = [...]uint8{0, 10, 20, 26, 32, 44, 50, 55, 64, 78, 91, 109, 117, 130, 135, 145, 155, 163, 171, 181, 188, 196, 204, 214}
+var LINE_TYPE_INDICES = [...]uint8{0, 10, 20, 26, 32, 44, 50, 55, 70, 79, 93, 106, 124, 132, 145, 150, 160, 173, 183, 191, 199, 209, 216, 224, 232, 242}
 
 func (i Line_Type) String() string {
 	return LINE_TYPE_NAMES[LINE_TYPE_INDICES[i]:LINE_TYPE_INDICES[i+1]]
