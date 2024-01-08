@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.3
+
+Patch Release
+
+### Bugs
+
+- Fixed false-positive declarations (headers footers, etc.), once confirmed to be false, *always* reverting to action elements because of an obtuse control-flow fail.
+- Fixed dual-dialogue page breaks sometimes creating two pages for themselves.
+- Fixed dual-dialogue page breaks sometimes doing a fun bonus increment of the `#PAGE` value.
+- Fixed dual-dialogue page-breaks sometimes omitting the header and footer.
+
 ## 0.2.2
 
 Patch Release
