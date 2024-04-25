@@ -16,9 +16,9 @@ Building on top of Fountain, Meander can create all sorts of production document
 
 Meander also extends the core syntax with simple, clever and worthwhile features to make it more powerful.
 
-You can [download Meander from itch.io](https://qxoko.itch.io/meander) under a 'pay what you want' model, which includes free.
+You can [download Meander from itch.io](https://lichendust.itch.io/meander) under a 'pay what you want' model, which includes free.
 
-[<img height="60px" src="https://static.itch.io/images/badge-color.svg">](https://qxoko.itch.io/meander)
+[<img height="60px" src="https://static.itch.io/images/badge-color.svg">](https://lichendust.itch.io/meander)
 
 In spite of this quite scary table of contents, Meander is *extremely* simple to use.  There's just a lot to cover!
 
@@ -144,7 +144,11 @@ Characters can also have multiple names — `Ashby` and his occasional full name
 
 Only include the actual gender data in the boneyard, with at least one `[gender.x]` header as the first non-whitespace text inside.  Whitespace, indentation and letter casings are not considered: the way the name is written in the table is how it will appear in the output.
 
-You can put the gender table anywhere, so if you want to shove it way down at the end, Meander doesn't mind.  If you supply more than one table (such as across multiple included files), those new characters will be combined.  (You could make a stub file that outputs the gender info for a whole season of episodes, for example).  Existing characters are not changed to prevent confusion: always define a character in a single location.
+You can put the gender table anywhere, so if you want to shove it way down at the end, Meander doesn't mind.  If you supply more than one table (such as across multiple included files), those new characters will be combined.
+
+> For instance, you could create a stub file that `includes` and therefore outputs the statistics for a whole season of episodes.
+
+~~Existing characters are not changed to prevent confusion: always define a character in a single location.~~  This was changed in `v0.2.4`, because the pros actually outweighed the cons of this.
 
 ### Data
 
@@ -175,13 +179,13 @@ Because Final Draft has a Fountain importer, Meander does not *export* to `.fdx`
 
 > This command is currently considered experimental.  I have limited access to example `.fdx` files, especially those demonstrating complex features like page-locking.
 >
-> Note that Meander's non-standard [syntax extensions](#syntax-extensions) are a [known issue for importing with Final Draft](https://github.com/qxoko/meander/issues/3).  If this is a requirement, you should limit your use of any non-standard syntax for the time being.
+> Note that Meander's non-standard [syntax extensions](#syntax-extensions) are a [known issue for importing with Final Draft](https://github.com/lichendust/meander/issues/3).  If this is a requirement, you should limit your use of any non-standard syntax for the time being.
 >
 > Please open an issue for any other import/export concerns.  If there is sufficient need, Meander can easily support its own export mode to support more Final Draft features.
 
 ## Render Flags
 
-Almost everything in Meander has a default specification.  For the following sections, the item marked with a star is the default, implied parameter.  If that's the one you want, you don't need to specify it.
+Almost everything in Meander has a default specification.  For the following sections, the item marked with an asterisk* is the default, implied parameter.  If that's the one you want, you don't need to specify it.
 
 ### Scenes
 
@@ -192,7 +196,7 @@ However, Meander offers more options during rendering —
     meander -s input
     meander --scene input
 
-- `input` uses the original input markers from the text. ⭐
+- `input` uses the original input markers from the text.*
 - `remove` removes all of them from the output.
 - `generate` creates a new sequence starting from `1`, which increments correctly across multiple files.
 
@@ -202,7 +206,7 @@ If you're not familiar with Fountain, if you choose to write in scene headings m
 
 Meander also offers different formatting options.  Right now, it comes with —
 
-- `screenplay` ⭐
+- `screenplay`*
 - `stageplay`
 - `manuscript`
 - `graphicnovel`
@@ -215,9 +219,9 @@ These formats can be specified as part of the title page, in the form `format: s
 
 ### Paper Sizes
 
-Meander also supports different paper sizes:
+Meander also supports different paper sizes —
 
-- `US Letter` ⭐
+- `US Letter`*
 - `US Legal`
 - `A4`
 
@@ -281,10 +285,12 @@ Headers and footers add their contents to the top and bottom of all subsequent p
 
 You can also specify left, right or centre alignment by using pipe characters —
 
-    header: left | centre | right
     header: left | right
+    header: left | centre | right
+
+    footer: left only
     footer: | centre only |
-    footer: | left only
+    footer: | right only
 
 In fact, the default header for every Meander document is defined like so —
 
@@ -298,11 +304,11 @@ They can also be stopped by leaving them empty —
 
 You can set a header anywhere in the text, but it will only take effect on the following page: set a new header before a manual page-break then.
 
-Headers and footers are also valid title page elements in Meander, so if you're just setting one for the entire document, feel free to set them there; useful for using the feature while maintaining compatibility.
+Headers and footers are also valid title page elements in Meander, so if you're just setting a single one for the entire document, you should do it this way — it's useful for maintaining compatibility with other Fountain tools.
 
 ### Counters
 
-Sometimes, numerical counters are useful for tracking values across a screenplay, independently of say, the scene numbers or the page count.
+Sometimes, you might want a numerical counter for tracking values across a screenplay, independently of say, the scene numbers or the page count.
 
 Meander's syntax for this is a pound sign `#` followed by a keyword of your choice.  This word should be made of only letters and underscores and is written in ALL CAPS by convention —
 
@@ -382,7 +388,7 @@ go tool dist list
 
 ## Editor Support
 
-While there are several generic packages available for screenwriting with Fountain available for most text editors, I have built first-party support for Meander, its syntax and a number of extra tools into a [Sublime Text package](https://github.com/qxoko/meander-sublime).
+While there are several generic packages available for screenwriting with Fountain available for most text editors, I have built first-party support for Meander, its syntax and a number of extra tools into a [Sublime Text package](https://github.com/lichendust/meander-sublime).
 
 Meander for Sublime Text should also be treated as a reference implementation for other packages and further text editor support.
 
@@ -392,7 +398,7 @@ I plan to add starred revisions, page-locking and expanded language support to M
 
 Most editorial changes of this variety require more syntactic changes to Fountain itself.  Most other tools get around this by moving the goalposts and putting your documents in some arbitrary binary format, which will **never happen** with Meander, because it violates the entire purpose of Fountain in the first place.
 
-Please check the [Ideas tag](https://github.com/qxoko/meander/labels/idea) for my current proposals to this effect and give any suggestions or feedback you may have.
+Please check the [Ideas tag](https://github.com/lichendust/meander/labels/idea) for my current proposals to this effect and give any suggestions or feedback you may have.
 
 ## Attribution
 
