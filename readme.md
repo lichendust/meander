@@ -111,7 +111,7 @@ Calling —
 
 — will output a terminal-friendly version of the stats for that file (and its included files, if applicable).
 
-![Screenshot of a computer terminal window displaying a breakdown of the lines spoken by characters in the film "Big Fish", with specific focus on their genders](https://stuff.lichendust.com/media/meander_gender.webp)
+![Screenshot of a computer terminal window displaying a breakdown of the lines spoken by characters in the film "Big Fish", with specific focus on their genders](https://stuff.lichendust.com/media/meander-gender.webp)
 
 The information backing this analysis comes from a custom [boneyard](https://fountain.io/syntax#section-bone) comment[^1] in the root file of your screenplay.
 
@@ -148,7 +148,7 @@ You can put the gender table anywhere, so if you want to shove it way down at th
 
 > For instance, you could create a stub file that `includes` and therefore outputs the statistics for a whole season of episodes.
 
-~~Existing characters are not changed to prevent confusion: always define a character in a single location.~~  This was changed in `v0.3.0`, because the pros actually outweighed the cons of this.
+~~Existing characters are not changed to prevent confusion: always define a character in a single location.~~  This will be changed in `v0.3.0`, because the pros actually outweighed the cons of this.
 
 ### Data
 
