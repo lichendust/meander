@@ -2,7 +2,7 @@
 
 Meander is a tiny, single-binary, portable utility for the production writing markup language [Fountain](https://fountain.io).
 
-![Screenshot of three windows on a computer desktop.  Left is a text editor, middle is a Meander command being run, and right is a finished PDF displaying the same text, now properly formatted.](images/meander_all.webp)
+![A stylised image of the word 'Meander' on a beige paper background, which says 'plain-text screenwriting for everyone, everywhere' beneath it](https://stuff.lichendust.com/media/meander.webp)
 
 Meander has a focus on beautiful formatting on the page, as well as being available and fully functional on as large a number of platforms as possible — most of the highly-regarded industry standard tools are prohibitively expensive simply by virtue of only being available on Apple devices.
 
@@ -111,7 +111,7 @@ Calling —
 
 — will output a terminal-friendly version of the stats for that file (and its included files, if applicable).
 
-![Screenshot of a computer terminal window displaying a breakdown of the lines spoken by characters in the film "Big Fish", with specific focus on their genders](images/meander_gender.webp)
+![Screenshot of a computer terminal window displaying a breakdown of the lines spoken by characters in the film "Big Fish", with specific focus on their genders](https://stuff.lichendust.com/media/meander_gender.webp)
 
 The information backing this analysis comes from a custom [boneyard](https://fountain.io/syntax#section-bone) comment[^1] in the root file of your screenplay.
 
@@ -148,7 +148,7 @@ You can put the gender table anywhere, so if you want to shove it way down at th
 
 > For instance, you could create a stub file that `includes` and therefore outputs the statistics for a whole season of episodes.
 
-~~Existing characters are not changed to prevent confusion: always define a character in a single location.~~  This was changed in `v0.2.4`, because the pros actually outweighed the cons of this.
+~~Existing characters are not changed to prevent confusion: always define a character in a single location.~~  This was changed in `v0.3.0`, because the pros actually outweighed the cons of this.
 
 ### Data
 
