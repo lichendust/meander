@@ -2,19 +2,6 @@
 	Meander
 	A portable Fountain utility for production writing
 	Copyright (C) 2022-2023 Harley Denham
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
@@ -51,7 +38,8 @@ type Fountain struct {
 	Characters []Character `json:"characters,omitempty"`
 	Content    []Section   `json:"content,omitempty"`
 
-	paper    *lib.Rect
+	config *Config
+
 	template *Template
 
 	header string
@@ -62,6 +50,8 @@ type Fountain struct {
 
 	chars_lookup   map[string]int
 	counter_lookup map[string]*Counter
+
+	line_number int
 }
 
 type Character struct {
@@ -86,7 +76,10 @@ type Section struct {
 	Type        Line_Type `json:"type"`
 	Text        string    `json:"text,omitempty"`
 	SceneNumber string    `json:"scene_number,omitempty"`
+	Revision    string    `json:"revision,omitempty"`
 	Level       int       `json:"level,omitempty"`
+
+	clean_revision string // internal for string matching
 
 	longest_line int
 	lines []Line
@@ -157,12 +150,20 @@ type Counter struct {
 	value int
 }
 
-func init_data() *Fountain {
+func init_data(config *Config) *Fountain {
 	data := new(Fountain)
 
 	data.Meta.Source  = MEANDER
 	data.Meta.Version = DATA_VERSION
 
+	if !config.paper_set {
+		config.paper_size = *lib.PageSizeLetter
+	}
+	if !config.template_set {
+		config.template = SCREENPLAY
+	}
+
+	data.config = config
 	return data
 }
 
@@ -202,6 +203,7 @@ const (
 	SECTION3
 
 	TYPE_COUNT
+	TYPE_NONE
 )
 
 func (x Line_Type) MarshalJSON() ([]byte, error) {
@@ -224,115 +226,12 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 	// element is indented action
 	text = consume_newlines(text)
 
-	{
-		// remove boneyards in a single step:
-		// it's the only syntax that crosses a
-		// line-boundary, so we deal with it now
-
-		copy := new(strings.Builder)
-		copy.Grow(len(text))
-
-		eat_spaces    := false
-		eat_newlines  := false
-		last_rune     := '_'
-
-		is_escaped := false
-
-		for len(text) > 0 {
-			if !config.include_notes {
-				if text[0] == '[' && len(text) > 1 && text[1] == '[' {
-					if is_escaped {
-						text = text[2:]
-						copy.WriteString("[[")
-						is_escaped = false
-						continue
-					}
-
-					n := rune_pair(text[2:], ']', ']')
-
-					if n < 0 {
-						copy.WriteString("[[")
-						text = text[2:]
-						continue
-					}
-
-					text = text[n + 2:]
-
-					eat_newlines = (last_rune == '\n')
-					eat_spaces   = (last_rune == ' ')
-					continue
-				}
-			}
-
-			if text[0] == '/' && len(text) > 1 && text[1] == '*' {
-				if is_escaped {
-					text = text[2:]
-					copy.WriteString("/*")
-					is_escaped = false
-					continue
-				}
-
-				n := rune_pair(text[2:], '*', '/')
-
-				if n < 0 {
-					copy.WriteString("/*")
-					text = text[2:]
-					continue
-				}
-
-				parse_gender(data, text[2:n])
-
-				text = text[n + 2:]
-
-				eat_newlines = (last_rune == '\n')
-				eat_spaces   = (last_rune == ' ')
-				continue
-			}
-
-			r, width := utf8.DecodeRuneInString(text)
-			text = text[width:]
-
-			if r == '\\' {
-				last_rune = '\\'
-
-				if is_escaped {
-					copy.WriteRune('\\')
-					is_escaped = false
-					continue
-				}
-
-				is_escaped = true
-				continue
-			}
-
-			if is_escaped {
-				copy.WriteRune('\\')
-			}
-			is_escaped = false
-
-			last_rune = r
-
-			if r == '\n' && eat_newlines {
-				continue
-			} else {
-				eat_newlines = false
-			}
-			if r == ' ' && eat_spaces {
-				continue
-			} else {
-				eat_spaces = false
-			}
-
-			copy.WriteRune(r)
-		}
-
-		text = copy.String() // return de-boned string
-	}
+	// @todo line_number needs to be supported for maths
 
 	// title page mini-parser
 	for {
-		n, ok := find_title_colon(text)
-		if !ok {
+		n, success := find_title_colon(text)
+		if !success {
 			break
 		}
 
@@ -427,12 +326,20 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 				data.more_tag = sub_line
 
 			case "format", "template":
-				if len(config.template) == 0 {
-					config.template = sub_line
+				if !config.template_set {
+					x, success := is_valid_format(sub_line)
+					if success {
+						config.template     = x
+						config.template_set = true
+					}
 				}
 			case "paper":
-				if len(config.paper_size) == 0 {
-					config.paper_size = sub_line
+				if !config.paper_set {
+					x, success := set_paper(sub_line)
+					if success {
+						config.paper_size = x
+						config.paper_set  = true
+					}
 				}
 			}
 		}
@@ -440,6 +347,113 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 		if break_main_loop {
 			break
 		}
+	}
+
+	data.template = build_template(config, config.template)
+
+	{
+		// remove boneyards in a single step:
+		// it's the only syntax that crosses a
+		// line-boundary, so we deal with it now
+
+		copy := new(strings.Builder)
+		copy.Grow(len(text))
+
+		eat_spaces    := false
+		eat_newlines  := false
+		last_rune     := '_'
+
+		is_escaped := false
+
+		for len(text) > 0 {
+			if !config.include_notes {
+				if text[0] == '[' && len(text) > 1 && text[1] == '[' {
+					if is_escaped {
+						text = text[2:]
+						copy.WriteString("[[")
+						is_escaped = false
+						continue
+					}
+
+					n := rune_pair(text[2:], ']', ']')
+
+					if n < 0 {
+						copy.WriteString("[[")
+						text = text[2:]
+						continue
+					}
+
+					text = text[n + 2:]
+
+					eat_newlines = (last_rune == '\n')
+					eat_spaces   = (last_rune == ' ')
+					continue
+				}
+			}
+
+			if text[0] == '/' && len(text) > 1 && text[1] == '*' {
+				if is_escaped {
+					text = text[2:]
+					copy.WriteString("/*")
+					is_escaped = false
+					continue
+				}
+
+				n := rune_pair(text[2:], '*', '/')
+
+				if n < 0 {
+					copy.WriteString("/*")
+					text = text[2:]
+					continue
+				}
+
+				parse_data_table(data, text[2:n])
+
+				text = text[n + 2:]
+
+				eat_newlines = (last_rune == '\n')
+				eat_spaces   = (last_rune == ' ')
+				continue
+			}
+
+			r, width := get_rune(text)
+			text = text[width:]
+
+			if r == '\\' {
+				last_rune = '\\'
+
+				if is_escaped {
+					copy.WriteRune('\\')
+					is_escaped = false
+					continue
+				}
+
+				is_escaped = true
+				continue
+			}
+
+			if is_escaped {
+				copy.WriteRune('\\')
+			}
+			is_escaped = false
+
+			last_rune = r
+
+			if r == '\n' && eat_newlines {
+				continue
+			} else {
+				eat_newlines = false
+			}
+			if r == ' ' && eat_spaces {
+				continue
+			} else {
+				eat_spaces = false
+			}
+
+			copy.WriteRune(r)
+		}
+
+		text = copy.String() // return de-boned string
 	}
 
 	// update any missing configuration by
@@ -555,7 +569,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 
 		case '#':
 			// if we consider it to be a variable, we action it
-			if r, _ := utf8.DecodeRuneInString(clean_line[1:]); !(r == '#' || unicode.IsSpace(r)) {
+			if r, _ := get_rune(clean_line[1:]); !(r == '#' || unicode.IsSpace(r)) {
 				the_type = ACTION
 
 			// otherwise it's a section and we treat it
@@ -574,7 +588,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 
 		case '(':
 			if clean_line[len(clean_line) - 1] == ')' {
-				if last_node, ok := get_last_section(nodes); ok {
+				if last_node, success := get_last_section(nodes); success {
 					if is_character_train(last_node.Type) {
 						the_type = PARENTHETICAL
 					}
@@ -593,8 +607,8 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 
 		case '.':
 			if left_trim(clean_line[1:])[0] != '.' {
-				name, number, ok := get_scene_number(left_trim(clean_line[1:]))
-				if !ok {
+				name, number, success := get_scene_number(left_trim(clean_line[1:]))
+				if !success {
 					name = left_trim(clean_line[1:])
 				}
 
@@ -642,8 +656,8 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 
 			if is_valid_scene(clean_line) {
 				// can we combine this with the scene in the switch above? ^^
-				name, number, ok := get_scene_number(left_trim(clean_line))
-				if !ok {
+				name, number, success := get_scene_number(left_trim(clean_line))
+				if !success {
 					name = clean_line
 				}
 
@@ -666,7 +680,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 				}
 
 			} else {
-				if last_node, ok := get_last_section(nodes); ok && is_character_train(last_node.Type) {
+				if last_node, success := get_last_section(nodes); success && is_character_train(last_node.Type) {
 					the_type = DIALOGUE
 				} else {
 					clean_line = dirty_line // plain action uses dirty_line
@@ -686,6 +700,8 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 
 	for i := range nodes {
 		node := &nodes[i]
+
+		handle_rev_tags(node)
 
 		if !any_visible && node.Type > is_printable && !is_character_train(node.Type) {
 			any_visible = true
@@ -723,7 +739,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 				}
 			}
 
-			if x, ok := data.chars_lookup[name]; ok {
+			if x, success := data.chars_lookup[name]; success {
 				c := &data.Characters[x]
 				c.Lines += 1
 			} else {
@@ -738,12 +754,16 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 	}
 
 	has_dual := false
-	level := 0
+	revision := ""
+	level    := 0
+
 	for i := range nodes {
 		node := &nodes[i]
 
 		if node.Type == CHARACTER {
 			has_dual = node.Level > 0
+			revision = node.Revision
+
 			if has_dual {
 				node.Type += 1
 				level = node.Level
@@ -751,29 +771,40 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 			continue
 		}
 
-		if is_character_train(node.Type) && has_dual {
-			node.Type += 1
-			node.Level = level
+		if is_character_train(node.Type) {
+			if has_dual {
+				node.Type += 1
+				node.Level = level
+			}
+			node.Revision = revision
 			continue
 		}
 
+		revision = ""
 		has_dual = false
 	}
 
 	data.Content = nodes
 }
 
-func parse_gender(data *Fountain, text string) {
+func parse_data_table(data *Fountain, text string) {
 	text = strings.TrimSpace(text)
 
 	if !(len(text) > 8) {
 		return
 	}
-	if strings.ToLower(text[:8]) != "[gender." {
+
+	test_string := strings.ToLower(text[:9])
+	if test_string[:8] != "[gender." && test_string != "[template" {
 		return
 	}
-	data.Characters   = make([]Character, 0, 32) // we pre-empt needing these
-	current_gender := ""
+
+	const MODE_GENDER   = 0
+	const MODE_TEMPLATE = 1
+	current_mode := MODE_GENDER
+
+	current_gender   := ""
+	current_template := TYPE_NONE
 
 	for len(text) > 0 {
 		line := extract_to_newline(text)
@@ -792,37 +823,57 @@ func parse_gender(data *Fountain, text string) {
 
 			line = strings.ToLower(strings.TrimSpace(line[1:len(line) - 1]))
 
-			if !strings.HasPrefix(line, "gender.") {
-				return
+			if strings.HasPrefix(line, "gender.") {
+				current_mode   = MODE_GENDER
+				current_gender = line[7:]
+				continue
 			}
 
-			current_gender = line[7:]
+			current_template = TYPE_NONE
+
+			if strings.HasPrefix(line, "template.") {
+				current_mode = MODE_TEMPLATE
+				t, success := string_to_section_type(line[9:])
+				if success {
+					current_template = t
+				}
+				continue
+			} else if line == "template" {
+				current_mode = MODE_TEMPLATE
+				continue
+			} else {
+				// @error in data table heading
+			}
 			continue
 		}
 
-		names := strings.Split(line, "|")
-		for i, entry := range names {
-			names[i] = strings.TrimSpace(entry)
-		}
-		name := names[0]
-		names = names[1:]
-
-		n := len(data.Characters)
-
-		if len(names) > 0 {
-			for _, x := range names {
-				data.chars_lookup[strings.ToLower(x)] = n
+		if current_mode == MODE_GENDER {
+			names := strings.Split(line, "|")
+			for i, entry := range names {
+				names[i] = strings.TrimSpace(entry)
 			}
-		} else {
-			names = nil
-		}
+			name := names[0]
+			names = names[1:]
 
-		data.chars_lookup[strings.ToLower(name)] = n
-		data.Characters = append(data.Characters, Character{
-			Name:       name,
-			Gender:     current_gender,
-			OtherNames: names,
-		})
+			n := len(data.Characters)
+
+			if len(names) > 0 {
+				for _, x := range names {
+					data.chars_lookup[strings.ToLower(x)] = n
+				}
+			} else {
+				names = nil
+			}
+
+			data.chars_lookup[strings.ToLower(name)] = n
+			data.Characters = append(data.Characters, Character{
+				Name:       name,
+				Gender:     current_gender,
+				OtherNames: names,
+			})
+		} else {
+			template_entry_parser(data.template, current_template, line, data.line_number)
+		}
 	}
 }
 
@@ -860,15 +911,22 @@ func is_valid_character(line string) bool {
 
 	has_letters := false
 	first_char := true
-	copy := line
 
-	for len(copy) > 0 {
-		c, rune_width := utf8.DecodeRuneInString(copy)
+	for len(line) > 0 {
+		c, rune_width := get_rune(line)
+
+		// allow for rev markers
+		if c == '@' {
+			if _, w := extract_ident(line[rune_width:]); w > 0 {
+				line = line[rune_width + w:]
+				continue
+			}
+		}
 
 		if c == '(' && !first_char {
-			for i, c := range copy {
+			for i, c := range line {
 				if c == ')' {
-					copy = copy[i:]
+					line = line[i:]
 					break
 				}
 			}
@@ -882,7 +940,7 @@ func is_valid_character(line string) bool {
 			}
 		}
 
-		copy = copy[rune_width:]
+		line = line[rune_width:]
 		first_char = false
 	}
 
@@ -1010,8 +1068,8 @@ func nsdate(input string) string {
 					final.WriteString(t.Weekday().String()[:2])
 				}
 
-				if x, ok := nsconvert(repeat); ok {
-					final.WriteString(t.Format(x))
+				if nstime, success := nsconvert(repeat); success {
+					final.WriteString(t.Format(nstime))
 				} else {
 					return nsdate(default_timestamp) // just chuck the default back
 				}
@@ -1116,6 +1174,32 @@ func copy_without_style(incoming Section) Section {
 	incoming.lines = new_lines
 
 	return incoming
+}
+
+func handle_rev_tags(node *Section) {
+	index := strings.IndexRune(node.Text, '@')
+	if index < 0 {
+		return
+	}
+
+	word, width := extract_ident(node.Text[index + 1:])
+	if width > 0 {
+		node.Revision = strings.ToLower(word)
+
+		buffer := new(strings.Builder)
+		buffer.Grow(len(node.Text))
+
+		offset := index + width + 1
+
+		if offset == len(node.Text) {
+			buffer.WriteString(strings.TrimSpace(node.Text[:index]))
+		} else {
+			buffer.WriteString(node.Text[:index])
+			buffer.WriteString(strings.TrimSpace(node.Text[offset:]))
+		}
+
+		node.Text = buffer.String()
+	}
 }
 
 const LINE_TYPE_NAMES = "whitespacepage_breakheaderfooteris_printableactionscenebegin_charactercharacterdual_characterparentheticaldual_parentheticaldialoguedual_dialoguelyricdual_lyricend_charactertransitionsynopsiscenteredis_sectionsectionsection2section3type_count"

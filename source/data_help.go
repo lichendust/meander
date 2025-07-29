@@ -773,8 +773,9 @@ $1Paper Size$0
 
     $1--paper -p$0      (or title page) $1paper: A4$0
 
+    US Letter
+    US Legal
     A4
-    USLetter
 
 Note that for maximum compatibility, "paper" and "format" 
 should *not* be the first entries in the title page.  Most 
@@ -788,6 +789,12 @@ $1Force Hidden Syntaxes$0
     $1--notes$0
     $1--synopses$0
     $1--sections$0
+
+$1Starred Revision Markers$0
+------------------------
+
+    $1--stars$0
+    $1--stars-only$0
 `
 	}
 	return ""

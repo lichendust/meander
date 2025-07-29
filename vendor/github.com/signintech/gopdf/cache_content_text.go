@@ -18,6 +18,8 @@ const ContentTypeCell = 0
 // ContentTypeText text
 const ContentTypeText = 1
 
+var ErrContentTypeNotFound = errors.New("contentType not found")
+
 type cacheContentText struct {
 	//---setup---
 	rectangle      *Rect
@@ -39,6 +41,7 @@ type cacheContentText struct {
 	//---result---
 	cellWidthPdfUnit, textWidthPdfUnit float64
 	cellHeightPdfUnit                  float64
+	isPlaceHolder                      bool
 }
 
 func (c *cacheContentText) isSame(cache cacheContentText) bool {
@@ -56,7 +59,8 @@ func (c *cacheContentText) isSame(cache cacheContentText) bool {
 		c.fontStyle == cache.fontStyle &&
 		c.charSpacing == cache.charSpacing &&
 		c.setXCount == cache.setXCount &&
-		c.y == cache.y {
+		c.y == cache.y &&
+		c.isPlaceHolder == cache.isPlaceHolder {
 		return true
 	}
 
@@ -101,7 +105,7 @@ func (c *cacheContentText) calY() (float64, error) {
 
 		return y, nil
 	}
-	return 0.0, errors.New("contentType not found")
+	return 0.0, ErrContentTypeNotFound
 }
 
 func (c *cacheContentText) calX() (float64, error) {
@@ -118,7 +122,7 @@ func (c *cacheContentText) calX() (float64, error) {
 		}
 		return x, nil
 	}
-	return 0.0, errors.New("contentType not found")
+	return 0.0, ErrContentTypeNotFound
 }
 
 // FormatFloatTrim converts a float64 into a string, like Sprintf("%.3f")

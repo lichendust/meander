@@ -2,34 +2,24 @@
 	Meander
 	A portable Fountain utility for production writing
 	Copyright (C) 2022-2023 Harley Denham
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
 
+import "strings"
+import "strconv"
+import "unicode"
+import "unicode/utf8"
+
 import lib "github.com/signintech/gopdf"
 
 const (
-	FONT_SIZE = 12
-
 	PICA float64 = 12
 	INCH float64 = PICA * 6
 
 	LINE_HEIGHT = PICA
 
-	MARGIN_TOP    = INCH * 1.1
+	MARGIN_TOP    = INCH
 	MARGIN_LEFT   = INCH * 1.5
 	MARGIN_RIGHT  = INCH
 	MARGIN_BOTTOM = INCH
@@ -55,24 +45,37 @@ const (
 	STAGEPLAY
 	GRAPHIC_NOVEL
 	MANUSCRIPT
+	MANUSCRIPT_COMPACT
 	DOCUMENT
+
+	// exp
+	STORYBOARD
 )
 
 type Template struct {
 	kind       Format
 	landscape  bool
 
-	title_page_align uint8
+	// @todo this is redundant rn, but we're making this the new standard in the refactor
+	paper lib.Rect
 
-	space_above float64
+	title_page_align uint8
+	ignore_whitespace bool
+
 	line_height float64
 
-	left_margin  float64
-	right_margin float64
-	center_line  float64
+	margin_left       float64
+	margin_right      float64
+	margin_top        float64
+	margin_bottom     float64
+	center_line       float64
+	dual_right_offset float64
 
-	header_height float64
-	footer_height float64
+	starred_margin float64
+	starred_nudge  float64 // tiny offset for the height of starred rev asterisks
+
+	header_margin float64
+	footer_margin float64
 
 	text_color      Color
 	note_color      Color
@@ -97,16 +100,16 @@ type Template_Entry struct {
 	para_indent  int     // add first line indentation (by character offset)
 }
 
-func set_paper(text string) *lib.Rect {
+func set_paper(text string) (lib.Rect, bool) {
 	switch homogenise(text) {
 	case "a4":
-		return lib.PageSizeA4
+		return *lib.PageSizeA4, true
 	case "usletter", "letter":
-		return lib.PageSizeLetter
+		return *lib.PageSizeLetter, true
 	case "uslegal", "legal":
-		return lib.PageSizeLegal
+		return *lib.PageSizeLegal, true
 	}
-	return nil
+	return *lib.PageSizeLetter, false
 }
 
 func is_valid_format(text string) (Format, bool) {
@@ -119,105 +122,32 @@ func is_valid_format(text string) (Format, bool) {
 		return GRAPHIC_NOVEL, true
 	case "manuscript", "novel":
 		return MANUSCRIPT, true
+	case "manuscriptcompact", "novelcompact":
+		return MANUSCRIPT_COMPACT, true
 	case "document":
 		return DOCUMENT, true
+	case ".storyboard":
+		return STORYBOARD, true
 	}
-	return 0, false
+	return SCREENPLAY, false
 }
 
-func default_screenplay(paper lib.Rect) *Template {
-	base := Template{
-		kind:             SCREENPLAY,
-		line_height:      PICA,
-		title_page_align: CENTER,
+func build_template(config *Config, format Format) *Template {
+	output := new(Template)
 
-		types: [TYPE_COUNT]Template_Entry{
-			ACTION: {
-				width: paper.W - MARGIN_LEFT - MARGIN_RIGHT - PICA,
-			},
-			SCENE: {
-				casing:       UPPERCASE,
-				style:        UNDERLINE,
-				space_above:  PICA,
-				trail_height: PICA * 2,
-			},
-			CHARACTER: {
-				margin:       INCH * 2,
-				trail_height: PICA * 3,
-			},
-			DUAL_CHARACTER: {
-				margin:       INCH / 2,
-				trail_height: PICA * 3,
-			},
-			PARENTHETICAL: {
-				margin:       INCH * 1.4,
-				width:        INCH * 2,
-				trail_height: PICA * 2,
-			},
-			DUAL_PARENTHETICAL: {
-				margin:       INCH / 2 - CHAR_WIDTH * 3,
-				width:        INCH * 2.5,
-				trail_height: PICA * 2,
-			},
-			DIALOGUE: {
-				margin: INCH,
-				width:  INCH * 3,
-			},
-			DUAL_DIALOGUE: {
-				width:  INCH * 2.5,
-			},
-			LYRIC: {
-				margin: INCH,
-				width:  INCH * 3,
-				style:  ITALIC,
-			},
-			DUAL_LYRIC: {
-				margin: INCH,
-				width:  INCH * 2.5,
-				style:  ITALIC,
-			},
-			TRANSITION: {
-				casing:  UPPERCASE,
-				justify: RIGHT,
-			},
-			CENTERED: {
-				justify: CENTER,
-				width:   INCH * 5,
-			},
-			SYNOPSIS: {
-				skip:  true,
-				style: ITALIC,
-			},
-			SECTION: {
-				skip:         true,
-				casing:       UPPERCASE,
-				style:        BOLD | UNDERLINE,
-				space_above:  PICA,
-				trail_height: PICA * 2,
-			},
-			SECTION2: {
-				skip:         true,
-				casing:       UPPERCASE,
-				style:        BOLD,
-				trail_height: PICA * 2,
-			},
-			SECTION3: {
-				skip:         true,
-				style:        BOLD,
-				trail_height: PICA * 2,
-			},
-		},
-	}
-	return &base
-}
+	output.kind = format
 
-func build_template(config *Config, format Format, paper lib.Rect) (output *Template) {
+	output.margin_left   = MARGIN_LEFT
+	output.margin_right  = MARGIN_RIGHT
+	output.margin_top    = MARGIN_TOP
+	output.margin_bottom = MARGIN_BOTTOM
+
 	switch format {
 	default:
-		output = default_screenplay(paper)
+		default_screenplay(output, config.paper_size)
 
 	case STAGEPLAY:
-		output = default_screenplay(paper)
+		default_screenplay(output, config.paper_size)
 
 		output.types[ACTION]        .width  = INCH * 3.2
 		output.types[ACTION]        .margin = INCH * 2.5
@@ -227,110 +157,155 @@ func build_template(config *Config, format Format, paper lib.Rect) (output *Temp
 		output.types[LYRIC]         .width  = INCH * 4.5
 
 	case GRAPHIC_NOVEL:
-		output = default_screenplay(paper)
+		default_screenplay(output, config.paper_size)
 
-		output.types[SECTION] .skip = false
-		output.types[SECTION2].skip = false
-		output.types[SECTION3].skip = false
+		output.types[SECTION]  .skip = false
+		output.types[SECTION2] .skip = false
+		output.types[SECTION3] .skip = false
 
 	case MANUSCRIPT:
-		manuscript := Template{
-			title_page_align: CENTER,
-			line_height: PICA,
+		output.title_page_align  = CENTER
+		output.line_height       = PICA
+		output.margin_left       = INCH
+		output.ignore_whitespace = true
 
-			types: [TYPE_COUNT]Template_Entry{
-				ACTION: {
-					para_indent: 4,
-					line_height: PICA * 2,
-					space_above: PICA,
-					width:       paper.W - MARGIN_LEFT - MARGIN_RIGHT - PICA,
-				},
-				SCENE: {
-					casing:      UPPERCASE,
-					space_above: PICA,
-					width:       INCH * 5,
-				},
-				TRANSITION: {
-					casing:  UPPERCASE,
-					justify: RIGHT,
-				},
-				CENTERED: {
-					justify: CENTER,
-					width:   INCH * 5,
-				},
-				SYNOPSIS: {
-					skip:  true,
-					style: ITALIC,
-				},
-				SECTION: {
-					justify:      CENTER,
-					casing:       UPPERCASE,
-					style:        BOLD,
-					space_above:  PICA,
-					trail_height: PICA * 2,
-				},
-				SECTION2: {
-					casing:       UPPERCASE,
-					style:        BOLD,
-					space_above:  PICA,
-					trail_height: PICA * 2,
-				},
-				SECTION3: {
-					style:        BOLD,
-					space_above:  PICA,
-					trail_height: PICA * 2,
-				},
-			},
-		}
+		output.types[ACTION].para_indent = 4
+		output.types[ACTION].line_height = PICA * 2
 
-		output = &manuscript
+		output.types[SCENE].casing      = UPPERCASE
+		output.types[SCENE].space_above = PICA
+		output.types[SCENE].width       = INCH * 5
+
+		output.types[TRANSITION].casing  = UPPERCASE
+		output.types[TRANSITION].justify = RIGHT
+
+		output.types[CENTERED].justify = CENTER
+		output.types[CENTERED].width   = INCH * 5
+
+		output.types[SYNOPSIS].skip  = true
+		output.types[SYNOPSIS].style = ITALIC
+
+		output.types[SECTION].justify      = CENTER
+		output.types[SECTION].casing       = UPPERCASE
+		output.types[SECTION].style        = BOLD
+		output.types[SECTION].space_above  = PICA
+		output.types[SECTION].trail_height = PICA * 2
+
+		output.types[SECTION2].casing       = UPPERCASE
+		output.types[SECTION2].style        = BOLD
+		output.types[SECTION2].space_above  = PICA
+		output.types[SECTION2].trail_height = PICA * 2
+
+		output.types[SECTION3].style        = BOLD
+		output.types[SECTION3].space_above  = PICA
+		output.types[SECTION3].trail_height = PICA * 2
+
+	case MANUSCRIPT_COMPACT:
+		output.title_page_align = CENTER
+		output.line_height      = PICA
+
+		output.types[ACTION].para_indent = 4
+		output.types[ACTION].line_height = PICA
+		output.types[ACTION].width       = INCH * 3.5
+
+		output.types[SCENE].casing      = UPPERCASE
+		output.types[SCENE].space_above = PICA
+		output.types[SCENE].width       = INCH * 5
+
+		output.types[TRANSITION].casing  = UPPERCASE
+		output.types[TRANSITION].justify = RIGHT
+
+		output.types[CENTERED].justify = CENTER
+		output.types[CENTERED].width   = INCH * 3.5
+
+		output.types[SYNOPSIS].skip  = true
+		output.types[SYNOPSIS].style = ITALIC
+
+		output.types[SECTION].casing       = UPPERCASE
+		output.types[SECTION].style        = BOLD
+		output.types[SECTION].space_above  = PICA
+		output.types[SECTION].trail_height = PICA * 2
+		output.types[SECTION].width        = INCH * 3.5
+
+		output.types[SECTION2].casing       = UPPERCASE
+		output.types[SECTION2].style        = BOLD
+		output.types[SECTION2].space_above  = PICA
+		output.types[SECTION2].trail_height = PICA * 2
+
+		output.types[SECTION3].style        = BOLD
+		output.types[SECTION3].space_above  = PICA
+		output.types[SECTION3].trail_height = PICA * 2
 
 	case DOCUMENT:
-		document := Template{
-			line_height:      PICA,
-			title_page_align: LEFT,
+		output.line_height      = PICA
+		output.title_page_align = LEFT
 
-			types: [TYPE_COUNT]Template_Entry{
-				ACTION: {
-					width: paper.W - MARGIN_LEFT - MARGIN_RIGHT - PICA,
-				},
-				SCENE: {
-					casing:       UPPERCASE,
-					style:        UNDERLINE,
-					space_above:  PICA,
-					trail_height: PICA * 2,
-				},
-				TRANSITION: {
-					casing:  UPPERCASE,
-					justify: RIGHT,
-				},
-				CENTERED: {
-					justify: CENTER,
-					width:   INCH * 5,
-				},
-				SYNOPSIS: {
-					style: ITALIC,
-				},
-				SECTION: {
-					casing:       UPPERCASE,
-					style:        BOLD | UNDERLINE,
-					space_above:  PICA,
-					trail_height: PICA * 2,
-				},
-				SECTION2: {
-					casing: UPPERCASE,
-					style:  BOLD,
-					trail_height: PICA * 2,
-				},
-				SECTION3: {
-					style: BOLD,
-					trail_height: PICA * 2,
-				},
-			},
-		}
+		output.types[SCENE].casing       = UPPERCASE
+		output.types[SCENE].space_above  = PICA
+		output.types[SCENE].trail_height = PICA * 2
 
-		output = &document
+		output.types[TRANSITION].casing  = UPPERCASE
+		output.types[TRANSITION].justify = RIGHT
+
+		output.types[CENTERED].justify = CENTER
+		output.types[CENTERED].width   = INCH * 5
+
+		output.types[SYNOPSIS].style = ITALIC
+
+		output.types[SECTION].casing       = UPPERCASE
+		output.types[SECTION].style        = BOLD | UNDERLINE
+		output.types[SECTION].space_above  = PICA
+		output.types[SECTION].trail_height = PICA * 2
+
+		output.types[SECTION2].casing       = UPPERCASE
+		output.types[SECTION2].style        = BOLD
+		output.types[SECTION2].trail_height = PICA * 2
+
+		output.types[SECTION3].style        = BOLD
+		output.types[SECTION3].trail_height = PICA * 2
+
+	case STORYBOARD:
+		output.landscape = true
+
+		// @todo 'update paper'
+		config.paper_size.W, config.paper_size.H = config.paper_size.H, config.paper_size.W
+		output.margin_right = config.paper_size.W - MARGIN_RIGHT
+
+		default_screenplay(output, config.paper_size)
+
+		output.types[ACTION].width              = INCH * 3.5
+		output.types[CHARACTER].margin          = INCH
+		output.types[DUAL_CHARACTER].margin     = INCH / 2
+		output.types[PARENTHETICAL].margin      = INCH * 0.4
+		output.types[DUAL_PARENTHETICAL].margin = INCH * 1.4
+		output.types[DUAL_PARENTHETICAL].width  = INCH * 2
+		output.types[DIALOGUE].margin           = 0
+		output.types[DIALOGUE].margin           = INCH * 2.5
+		output.types[DUAL_DIALOGUE].margin      = 0
+		output.types[DUAL_DIALOGUE].width       = INCH * 1.5
+		output.types[LYRIC].margin              = 0
+		output.types[TRANSITION].margin         = INCH * 5.5
 	}
+
+	// @todo bottom margin should reflect this pre-compute standard?
+	output.margin_right  = config.paper_size.W - MARGIN_RIGHT
+
+	if output.header_margin == 0 {
+		output.header_margin = PICA * 3
+	}
+	if output.footer_margin == 0 {
+		output.footer_margin = config.paper_size.H - PICA * 3
+	}
+	if output.center_line == 0 {
+		output.center_line = config.paper_size.W / 2
+	}
+
+	if output.types[ACTION].width == 0 {
+		output.types[ACTION].width = output.margin_right - output.margin_left - PICA
+	}
+
+	output.starred_nudge  = 1.2
+	output.starred_margin = output.margin_right + PICA * 2
 
 	zero_color := Color{0, 0, 0}
 	if output.note_color == zero_color {
@@ -343,10 +318,6 @@ func build_template(config *Config, format Format, paper lib.Rect) (output *Temp
 	for i := range output.types {
 		t := &output.types[i]
 
-		if t.space_above == 0 {
-			t.space_above = output.space_above
-		}
-
 		if t.line_height == 0 {
 			if output.line_height == 0 {
 				t.line_height = LINE_HEIGHT
@@ -356,25 +327,8 @@ func build_template(config *Config, format Format, paper lib.Rect) (output *Temp
 		}
 	}
 
-	if output.header_height == 0 {
-		output.header_height = MARGIN_TOP - PICA * 3
-	}
-	if output.footer_height == 0 {
-		output.footer_height = paper.H - MARGIN_BOTTOM + PICA * 2
-	}
-
-	if output.left_margin == 0 {
-		output.left_margin = MARGIN_LEFT
-	}
-	if output.right_margin == 0 {
-		output.right_margin = paper.W - MARGIN_RIGHT
-	}
-	if output.center_line == 0 {
-		output.center_line = paper.W / 2
-	}
-
 	if config.include_sections {
-		output.types[SECTION].skip = false
+		output.types[SECTION].skip  = false
 		output.types[SECTION2].skip = false
 		output.types[SECTION3].skip = false
 	}
@@ -382,7 +336,574 @@ func build_template(config *Config, format Format, paper lib.Rect) (output *Temp
 		output.types[SYNOPSIS].skip = false
 	}
 
-	output.kind = format
-
 	return output
+}
+
+// the base screenplay template is re-used / built on by
+// several of the other templates, so it's here in a
+// reusable form
+func default_screenplay(output *Template, paper lib.Rect) {
+	output.kind             = SCREENPLAY
+	output.line_height      = PICA
+	output.title_page_align = CENTER
+
+	output.types[SCENE].casing       = UPPERCASE
+	output.types[SCENE].space_above  = PICA
+	output.types[SCENE].trail_height = PICA * 2
+
+	output.types[CHARACTER].margin       = INCH * 2
+	output.types[CHARACTER].trail_height = PICA * 3
+
+	output.types[DUAL_CHARACTER].margin       = INCH / 2
+	output.types[DUAL_CHARACTER].trail_height = PICA * 3
+
+	output.types[PARENTHETICAL].margin       = INCH * 1.4
+	output.types[PARENTHETICAL].width        = INCH * 2
+	output.types[PARENTHETICAL].trail_height = PICA * 2
+
+	output.types[DUAL_PARENTHETICAL].margin       = INCH / 2 - CHAR_WIDTH * 3
+	output.types[DUAL_PARENTHETICAL].width        = INCH * 2.5
+	output.types[DUAL_PARENTHETICAL].trail_height = PICA * 2
+
+	output.types[DIALOGUE].margin = INCH
+	output.types[DIALOGUE].width  = INCH * 3
+
+	output.types[DUAL_DIALOGUE].width = (output.margin_right - output.margin_left) / 2 - PICA * 2
+
+	output.types[LYRIC].margin = INCH
+	output.types[LYRIC].width  = INCH * 3
+	output.types[LYRIC].style  = ITALIC
+
+	output.types[DUAL_LYRIC].margin = INCH
+	output.types[DUAL_LYRIC].width  = INCH * 2.5
+	output.types[DUAL_LYRIC].style  = ITALIC
+
+	output.types[TRANSITION].casing  = UPPERCASE
+	output.types[TRANSITION].justify = RIGHT
+
+	output.types[CENTERED].justify = CENTER
+	output.types[CENTERED].width   = INCH * 5
+
+	output.types[SYNOPSIS].skip  = true
+	output.types[SYNOPSIS].style = ITALIC
+
+	output.types[SECTION].skip         = true
+	output.types[SECTION].casing       = UPPERCASE
+	output.types[SECTION].style        = BOLD | UNDERLINE
+	output.types[SECTION].space_above  = PICA
+	output.types[SECTION].trail_height = PICA * 2
+
+	output.types[SECTION2].skip         = true
+	output.types[SECTION2].casing       = UPPERCASE
+	output.types[SECTION2].style        = BOLD
+	output.types[SECTION2].trail_height = PICA * 2
+
+	output.types[SECTION3].skip         = true
+	output.types[SECTION3].style        = BOLD
+	output.types[SECTION3].trail_height = PICA * 2
+
+	output.dual_right_offset = paper.W - output.margin_right - output.types[DUAL_DIALOGUE].width - output.margin_left - PICA
+}
+
+func template_entry_parser(template *Template, current Line_Type, line string, line_count int) bool {
+	line = strings.ToLower(line)
+	ident, w := extract_ident(line)
+	line = left_trim(line[w:])
+
+	if r, w := get_rune(line); r == ':' {
+		line = left_trim(line[w:])
+	} else {
+		// @error
+		return false
+	}
+
+	if current < TYPE_COUNT {
+		switch ident {
+		case "skip":
+			template.types[current].skip = true
+
+		case "style":
+			if x, success := set_style(line); success {
+				template.types[current].style = x
+			} else {
+				eprintf("template error: invalid style %q", line)
+			}
+
+		case "casing":
+			if x, success := set_casing(line); success {
+				template.types[current].casing = x
+			} else {
+				eprintf("template error: line %-3d invalid letter case %q", line_count, line)
+			}
+
+		case "justify":
+			if x, success := set_alignment(line); success {
+				template.types[current].justify = x
+			} else {
+				eprintf("template error: invalid alignment %q", line)
+			}
+
+		case "margin":
+			template.types[current].margin = do_maths(template, line)
+
+		case "width":
+			template.types[current].width = do_maths(template, line)
+
+		case "space_above":
+			template.types[current].space_above = do_maths(template, line)
+
+		case "line_height":
+			template.types[current].line_height = do_maths(template, line)
+
+		case "trail_height":
+			template.types[current].trail_height = do_maths(template, line)
+
+		case "para_indent":
+			template.types[current].para_indent = int(do_maths(template, line))
+
+		default:
+			eprintf("template error: line %-3d bad key in template %q", line_count, ident)
+		}
+		return true
+	}
+
+	switch ident {
+	case "margin_left":
+		template.margin_left = do_maths(template, line)
+
+	case "margin_right":
+		template.margin_right = do_maths(template, line)
+
+	case "margin_top":
+		template.margin_top = do_maths(template, line)
+
+	case "margin_bottom":
+		template.margin_bottom = do_maths(template, line)
+
+	case "line_height":
+		template.line_height = do_maths(template, line)
+
+	case "center_line":
+		template.center_line = do_maths(template, line)
+
+	case "dual_right_offset":
+		template.dual_right_offset = do_maths(template, line)
+
+	case "header_margin":
+		template.header_margin = do_maths(template, line)
+
+	case "footer_margin":
+		template.footer_margin = do_maths(template, line)
+
+	case "landscape":
+		if line == "false" {
+			template.landscape = false
+		} else {
+			template.landscape = true
+		}
+
+	case "ignore_whitespace":
+		if line == "false" {
+			template.ignore_whitespace = false
+		} else {
+			template.ignore_whitespace = true
+		}
+
+	case "text_color":
+		if x, success := parse_color(line); success {
+			template.text_color = x
+		} else {
+			eprintf("template error: line %-3d invalid values in colour %q", line_count, line)
+		}
+
+	case "note_color":
+		if x, success := parse_color(line); success {
+			template.note_color = x
+		} else {
+			eprintf("template error: line %-3d invalid values in colour %q", line_count, line)
+		}
+
+	case "highlight_color":
+		if x, success := parse_color(line); success {
+			template.highlight_color = x
+		} else {
+			eprintf("template error: line %-3d invalid values in colour %q", line_count, line)
+		}
+
+	case "title_page_align":
+		if x, success := set_alignment(line); success {
+			template.title_page_align = x
+		} else {
+			eprintf("template error: invalid alignment %q", line)
+		}
+	}
+
+	return true
+}
+
+func set_style(line string) (Leaf_Type, bool) {
+	fields := strings.Fields(line)
+	var x Leaf_Type
+
+	for _, word := range fields {
+		switch word {
+		case "strikeout": x |= STRIKEOUT
+		case "underline": x |= UNDERLINE
+		case "highlight": x |= HIGHLIGHT
+		case "italic":    x |= ITALIC
+		case "bold":      x |= BOLD
+		case "none":
+			return 0, true
+		default:
+			return 0, false
+		}
+	}
+
+	return x, true
+}
+
+func set_casing(x string) (uint8, bool) {
+	switch strings.ToLower(x) {
+	case "upper", "uppercase":
+		return UPPERCASE, true
+	case "lower", "lowercase":
+		return LOWERCASE, true
+	}
+	return NONE, false
+}
+
+func set_alignment(x string) (uint8, bool) {
+	switch strings.ToLower(x) {
+	case "left":
+		return LEFT, true
+	case "right":
+		return RIGHT, true
+	case "centre", "center":
+		return CENTER, true
+	}
+	return LEFT, false
+}
+
+func parse_color(numbers string) (Color, bool) {
+	var c Color
+
+	array := strings.Fields(numbers)
+
+	for i, x := range array {
+		n, err := strconv.Atoi(x)
+		if err != nil {
+			return c, false
+		}
+
+		switch i {
+		case 0: c.R = uint8(n)
+		case 1: c.G = uint8(n)
+		case 2: c.B = uint8(n)
+		}
+	}
+
+	return c, true
+}
+
+func string_to_section_type(x string) (Line_Type, bool) {
+	switch strings.ToLower(x) {
+	case "action":
+		return ACTION, true
+	case "scene":
+		return SCENE, true
+	case "character":
+		return CHARACTER, true
+	case "dual_character":
+		return DUAL_CHARACTER, true
+	case "parenthetical":
+		return PARENTHETICAL, true
+	case "dual_parenthetical":
+		return DUAL_PARENTHETICAL, true
+	case "dialogue":
+		return DIALOGUE, true
+	case "dual_dialogue":
+		return DUAL_DIALOGUE, true
+	case "lyric":
+		return LYRIC, true
+	case "dual_lyric":
+		return DUAL_LYRIC, true
+	case "transition":
+		return TRANSITION, true
+	case "synopsis":
+		return SYNOPSIS, true
+	case "centered":
+		return CENTERED, true
+	case "section":
+		return SECTION, true
+	case "section2":
+		return SECTION2, true
+	case "section3":
+		return SECTION3, true
+	}
+	return WHITESPACE, false
+}
+
+func get_template_value(t *Template, name string) float64 {
+	n := strings.IndexRune(name, '.')
+	if n >= 0 {
+		taxonomy, width := extract_ident(name)
+		name = name[width:]
+		if len(name) > 0 && name[0] != '.' {
+			eprintf("bad template parse") // @todo
+		}
+
+		tax_type, success := string_to_section_type(taxonomy)
+		if !success {
+			eprintf("bad template parse on type") // @todo
+		}
+
+		name = name[1:]
+
+		switch name {
+		case "margin":
+			return t.types[tax_type].margin
+		case "width":
+			return t.types[tax_type].width
+		case "space_above":
+			return t.types[tax_type].space_above
+		case "line_height":
+			return t.types[tax_type].line_height
+		case "trail_height":
+			return t.types[tax_type].trail_height
+		case "para_indent":
+			return float64(t.types[tax_type].para_indent)
+		}
+
+		eprintf("can't do maths on template field %q", name)
+		return 0
+	}
+
+	switch name {
+	case "title_page_align":
+		return float64(t.title_page_align)
+	case "line_height":
+		return t.line_height
+	case "margin_left":
+		return t.margin_left
+	case "margin_right":
+		return t.margin_right
+	case "margin_top":
+		return t.margin_top
+	case "margin_bottom":
+		return t.margin_bottom
+	case "center_line":
+		return t.center_line
+	case "dual_right_offset":
+		return t.dual_right_offset
+	case "starred_margin":
+		return t.starred_margin
+	case "starred_nudge":
+		return t.starred_nudge
+	case "header_margin":
+		return t.header_margin
+	case "footer_margin":
+		return t.footer_margin
+
+	case "pica":
+		return PICA
+	case "inch":
+		return INCH
+	case "char_width":
+		return CHAR_WIDTH
+	case "paper_width":
+		return t.paper.W
+	case "paper_height":
+		return t.paper.H
+	}
+
+	eprintf("can't do maths on template field %q", name)
+	return 0
+}
+
+const (
+	OPERAND_VALUE uint8 = iota
+	OPERATION_ADD
+	OPERATION_SUB
+	OPERATION_MUL
+	OPERATION_DIV
+	PARENS_OPEN
+	PARENS_CLOSE
+)
+
+type Operation struct {
+	kind     uint8
+	priority uint8
+	value    float64
+}
+
+func extract_dotted_ident(input string) (string, int) {
+	width := 0
+	for _, c := range input {
+		if !(unicode.IsLetter(c) || c == '_' || c == '.') {
+			return input[:width], width
+		}
+		width += utf8.RuneLen(c)
+	}
+	return input, width
+}
+
+func extract_dotted_number(input string) (string, int) {
+	width := 0
+	for _, c := range input {
+		if !(unicode.IsNumber(c) || c == '.') {
+			return input[:width], width
+		}
+		width += utf8.RuneLen(c)
+	}
+	return input, width
+}
+
+func do_maths(t *Template, text string) float64 {
+	operations := make([]Operation, 0, 32)
+
+	for {
+		text = left_trim(text)
+		if len(text) == 0 {
+			break
+		}
+
+		char, char_width := get_rune(text)
+
+		var op Operation
+
+		switch char {
+		case '(', '[':
+			op.kind = PARENS_OPEN
+			text    = text[char_width:]
+		case ')', ']':
+			op.kind = PARENS_CLOSE
+			text    = text[char_width:]
+		case '-':
+			op.kind = OPERATION_SUB
+			text    = text[char_width:]
+		case '+':
+			op.kind = OPERATION_ADD
+			text    = text[char_width:]
+		case '*', '×':
+			op.kind     = OPERATION_MUL
+			op.priority = 1
+			text        = text[char_width:]
+		case '/', '÷':
+			op.kind     = OPERATION_DIV
+			op.priority = 1
+			text        = text[char_width:]
+		default:
+			if unicode.IsNumber(char) {
+				number, number_width := extract_dotted_number(text)
+				op.value = to_float(number)
+				text = text[number_width:]
+
+			} else if unicode.IsLetter(char) {
+				ident, ident_width := extract_dotted_ident(text)
+				op.value = get_template_value(t, ident)
+				text = text[ident_width:]
+			}
+		}
+
+		operations = append(operations, op)
+	}
+
+	operations = shunting_yard(operations)
+	stack := make([]Operation, 0, len(operations))
+
+	for _, token := range operations {
+		if token.kind == OPERAND_VALUE {
+			stack = append(stack, token)
+			continue
+		}
+
+		a := stack[len(stack) - 2].value
+		b := stack[len(stack) - 1].value
+
+		stack = stack[:len(stack) - 2]
+
+		result := float64(0)
+
+		switch token.kind {
+		case OPERATION_SUB:
+			result = a - b
+		case OPERATION_ADD:
+			result = a + b
+		case OPERATION_DIV:
+			result = a / b
+		case OPERATION_MUL:
+			result = a * b
+		}
+
+		stack = append(stack, Operation{value: result})
+	}
+
+	return stack[0].value
+}
+
+func shunting_yard(operations []Operation) []Operation {
+	final     := make([]Operation, 0, len(operations))
+	operators := make([]Operation, 0, len(operations))
+
+	for _, v := range operations {
+		if v.kind == OPERAND_VALUE {
+			final = append(final, v)
+		} else {
+			if v.kind == PARENS_OPEN {
+				operators = append(operators, v)
+
+			} else if v.kind == PARENS_CLOSE {
+				found_left := false
+
+				for len(operators) > 0 {
+					o := operators[len(operators) - 1]
+					operators = operators[:len(operators) - 1]
+
+					if o.kind == PARENS_OPEN {
+						found_left = true
+						break
+					} else {
+						final = append(final, o)
+					}
+				}
+
+				if !found_left {
+					eprintln("mismatched parentheses in expression")
+					return nil
+				}
+
+			} else {
+				for len(operators) > 0 {
+					top := operators[len(operators)-1]
+
+					if top.kind == PARENS_OPEN { break }
+
+					if v.priority <= top.priority {
+						operators = operators[:len(operators) - 1]
+						final = append(final, top)
+					} else {
+						break
+					}
+				}
+
+				operators = append(operators, v)
+			}
+		}
+	}
+
+	for len(operators) > 0 {
+		operator := operators[len(operators) - 1]
+		operators = operators[:len(operators) - 1]
+		final = append(final, operator)
+	}
+
+	return final
+}
+
+func to_float(s string) float64 {
+	n, e := strconv.ParseFloat(s, 64)
+	if e != nil {
+		return 0
+	}
+	return n
 }

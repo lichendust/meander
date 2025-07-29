@@ -1,5 +1,4 @@
-gopdf
-====
+# gopdf
 
 gopdf is a simple library for generating PDF document written in Go lang.
 
@@ -14,17 +13,16 @@ A minimum version of Go 1.13 is required.
 - Password protection
 - Font [kerning](https://en.wikipedia.org/wiki/Kerning)
 
-
 ## Installation
- ```
- go get -u github.com/signintech/gopdf
- ```
 
+```
+go get -u github.com/signintech/gopdf
+```
 
-### Print text 
+### Print text
 
 ```go
-  
+
 package main
 import (
 	"log"
@@ -34,7 +32,7 @@ import (
 func main() {
 
 	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{ PageSize: *gopdf.PageSizeA4 })  
+	pdf.Start(gopdf.Config{ PageSize: *gopdf.PageSizeA4 })
 	pdf.AddPage()
 	err := pdf.AddTTFFont("wts11", "../ttf/wts11.ttf")
 	if err != nil {
@@ -65,11 +63,11 @@ pdf.Cell(nil, "您好")
 
 ```go
 pdf.SetTextColorCMYK(0, 6, 14, 0)
-pdf.Cell
+pdf.Cell(nil, "Hello")
 ```
-  
+
 ### Image
-  
+
 ```go
 
 package main
@@ -80,7 +78,7 @@ import (
 
 func main() {
 	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4 })  
+	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4 })
 	pdf.AddPage()
 	var err error
 	err = pdf.AddTTFFont("loma", "../ttf/Loma.ttf")
@@ -88,7 +86,7 @@ func main() {
 		log.Print(err.Error())
 		return
 	}
-	
+
 	pdf.Image("../imgs/gopher.jpg", 200, 50, nil) //print image
 	err = pdf.SetFont("loma", "", 14)
 	if err != nil {
@@ -100,7 +98,7 @@ func main() {
 
 	pdf.WritePdf("image.pdf")
 }
-``` 
+```
 
 ### Links
 
@@ -115,7 +113,7 @@ import (
 
 func main()  {
 	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{ PageSize: *gopdf.PageSizeA4 }) //595.28, 841.89 = A4
+	pdf.Start(gopdf.Config{ PageSize: *gopdf.PageSizeA4 })
 	pdf.AddPage()
 	err := pdf.AddTTFFont("times", "./test/res/times.ttf")
 	if err != nil {
@@ -160,15 +158,15 @@ import (
 
 func main() {
     pdf := gopdf.GoPdf{}
-    pdf.Start(gopdf.Config{ PageSize: *gopdf.PageSizeA4 }) //595.28, 841.89 = A4
+    pdf.Start(gopdf.Config{ PageSize: *gopdf.PageSizeA4 })
 
-    err := pdf.AddTTFFont("LiberationSerif-Regular", "./test/res/LiberationSerif-Regular.ttf")
+    err := pdf.AddTTFFont("font1", "./test/res/font1.ttf")
     if err != nil {
         log.Print(err.Error())
         return
     }
 
-    err = pdf.SetFont("LiberationSerif-Regular", "", 14)
+    err = pdf.SetFont("font1", "", 14)
     if err != nil {
         log.Print(err.Error())
         return
@@ -197,6 +195,7 @@ func main() {
 ```
 
 ### Draw line
+
 ```go
 pdf.SetLineWidth(2)
 pdf.SetLineType("dashed")
@@ -204,12 +203,14 @@ pdf.Line(10, 30, 585, 30)
 ```
 
 ### Draw oval
+
 ```go
 pdf.SetLineWidth(1)
 pdf.Oval(100, 200, 500, 500)
 ```
 
 ### Draw polygon
+
 ```go
 pdf.SetStrokeColor(255, 0, 0)
 pdf.SetLineWidth(2)
@@ -218,6 +219,7 @@ pdf.Polygon([]gopdf.Point{{X: 10, Y: 30}, {X: 585, Y: 200}, {X: 585, Y: 250}}, "
 ```
 
 ### Draw rectangle with round corner
+
 ```go
 pdf.SetStrokeColor(255, 0, 0)
 pdf.SetLineWidth(2)
@@ -229,6 +231,7 @@ if err != nil {
 ```
 
 ### Draw rectangle with round corner using CMYK color model
+
 ```go
 pdf.SetStrokeColorCMYK(88, 49, 0, 0)
 pdf.SetLineWidth(2)
@@ -240,6 +243,7 @@ if err != nil {
 ```
 
 ### Rotation text or image
+
 ```go
 pdf.SetXY(100, 100)
 pdf.Rotate(270.0, 100.0, 100.0)
@@ -248,7 +252,9 @@ pdf.RotateReset() //reset
 ```
 
 ### Set transparency
+
 Read about [transparency in pdf](https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/PDF32000_2008.pdf) `(page 320, section 11)`
+
 ```go
 // alpha - value of transparency, can be between `0` and `1`
 // blendMode - default value is `/Normal` - read about [blendMode and kinds of its](https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/PDF32000_2008.pdf) `(page 325, section 11.3.5)`
@@ -261,6 +267,7 @@ pdf.SetTransparency(transparency Transparency)
 ```
 
 ### Password protection
+
 ```go
 package main
 
@@ -275,7 +282,7 @@ func main() {
 
 	pdf := gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{
-		PageSize: *gopdf.PageSizeA4, //595.28, 841.89 = A4
+		PageSize: *gopdf.PageSizeA4,
 		Protection: gopdf.PDFProtectionConfig{
 			UseProtection: true,
 			Permissions: gopdf.PermissionsPrint | gopdf.PermissionsCopy | gopdf.PermissionsModify,
@@ -290,8 +297,11 @@ func main() {
 }
 
 ```
-### Import existing PDF 
+
+### Import existing PDF
+
 Import existing PDF power by package [gofpdi](https://github.com/phpdave11/gofpdi) created by @phpdave11 (thank you :smile:)
+
 ```go
 package main
 
@@ -318,7 +328,7 @@ func main() {
         }
 
         pdf := gopdf.GoPdf{}
-        pdf.Start(gopdf.Config{PageSize: gopdf.Rect{W: 595.28, H: 841.89}}) //595.28, 841.89 = A4
+        pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
 
         pdf.AddPage()
 
@@ -387,20 +397,20 @@ import (
 )
 
 func main() {
-	
+
     pdf := gopdf.GoPdf{}
     mm6ToPx := 22.68
-    
+
     // Base trim-box
     pdf.Start(gopdf.Config{
-        PageSize: *gopdf.PageSizeA4, //595.28, 841.89 = A4
-        TrimBox: gopdf.Box{Left: mm6ToPx, Top: mm6ToPx, Right: 595 - mm6ToPx, Bottom: 842 - mm6ToPx},
+        PageSize: *gopdf.PageSizeA4,
+        TrimBox: gopdf.Box{Left: mm6ToPx, Top: mm6ToPx, Right: gopdf.PageSizeA4.W - mm6ToPx, Bottom: gopdf.PageSizeA4.H - mm6ToPx},
     })
 
     // Page trim-box
     opt := gopdf.PageOption{
-        PageSize: gopdf.PageSizeA4, //595.28, 841.89 = A4
-        TrimBox: &gopdf.Box{Left: mm6ToPx, Top: mm6ToPx, Right: 595 - mm6ToPx, Bottom: 842 - mm6ToPx},
+        PageSize: *gopdf.PageSizeA4,
+        TrimBox: &gopdf.Box{Left: mm6ToPx, Top: mm6ToPx, Right: gopdf.PageSizeA4.W - mm6ToPx, Bottom: gopdf.PageSizeA4.H - mm6ToPx},
     }
     pdf.AddPageWithOption(opt)
 
@@ -408,7 +418,7 @@ func main() {
         log.Print(err.Error())
         return
     }
-    
+
     if err := pdf.SetFont("wts11", "", 14); err != nil {
         log.Print(err.Error())
         return
@@ -419,5 +429,151 @@ func main() {
 }
 
 ```
+
+### Placeholder.
+
+> this function(s) made for experimental. There may be changes in the future.
+
+With the placeholder function(s), you can create a placeholder to define a position. To make room for text to be add later.
+
+There are 2 related function(s):
+
+- **PlaceHolderText(...)** used to create a placeholder to fill in text later.
+- **FillInPlaceHoldText(...)** used for filling in text into the placeholder that was created with **PlaceHolderText**.
+
+Use case: For example, when you want to print the "total number of pages" on every page in pdf file, but you don't know the "total number of pages" until you have created all the pages.
+You can use **func PlaceHolderText** to create the point where you want "total number of pages" to be printed. And then when you have created all the pages so you know the "total number of pages", you call **FillInPlaceHoldText(...)**. This function will take the text (in this case, text is "total number of pages") replace at the point that been created since **func PlaceHolderText**.
+
+```go
+func main(){
+    	pdf := GoPdf{}
+	pdf.Start(Config{PageSize: *PageSizeA4})
+	pdf.AddTTFFont("font1", "font1.ttf")
+	pdf.SetFont("font1", "", 14) }
+
+	for i := 0; i < 5; i++ {
+		pdf.AddPage()
+        	pdf.Br(20)
+        	//create PlaceHolder
+		err = pdf.PlaceHolderText("totalnumber", 30)
+		if err != nil {
+			log.Print(err.Error())
+			return
+		}
+
+	}
+
+    	//fillin text to PlaceHolder
+	err = pdf.FillInPlaceHoldText("totalnumber",fmt.Sprintf("%d", 5), Left)
+	if err != nil {
+		log.Print(err.Error())
+		return
+	}
+
+	pdf.WritePdf("placeholder_text.pdf")
+}
+```
+
+### Table Create
+```go
+package main
+
+import (
+    "fmt"
+
+    "github.com/signintech/gopdf"
+)
+
+func main() {
+
+	// Create a new PDF document
+	pdf := &gopdf.GoPdf{}
+	// Start the PDF with a custom page size (we'll adjust it later)
+	pdf.Start(gopdf.Config{PageSize: gopdf.Rect{W: 430, H: 200}})
+	// Add a new page to the document
+	pdf.AddPage()
+
+	 pdf.AddTTFFont("font1", "./font1.ttf")
+	pdf.SetFont("font1", "", 11)
+	
+	pdf.AddTTFFont("font2", "./font2.ttf")
+	pdf.SetFont("font2", "", 11)
+	
+	// Set the starting Y position for the table
+	tableStartY := 10.0
+	// Set the left margin for the table
+	marginLeft := 10.0
+
+	// Create a new table layout
+	table := pdf.NewTableLayout(marginLeft, tableStartY, 25, 5)
+
+	// Add columns to the table
+	table.AddColumn("CODE", 50, "left")
+	table.AddColumn("DESCRIPTION", 200, "left")
+	table.AddColumn("QTY.", 40, "right")
+	table.AddColumn("PRICE", 60, "right")
+	table.AddColumn("TOTAL", 60, "right")
+
+	// Add rows to the table
+	table.AddRow([]string{"001", "Product A", "2", "10.00", "20.00"})
+	table.AddRow([]string{"002", "Product B", "1", "15.00", "15.00"})
+	table.AddRow([]string{"003", "Product C", "3", "5.00", "15.00"})
+
+	// Set the style for table cells
+	table.SetTableStyle(gopdf.CellStyle{
+		BorderStyle: gopdf.BorderStyle{
+			Top:    true,
+			Left:   true,
+			Bottom: true,
+			Right:  true,
+			Width:  1.0,
+		},
+		FillColor: gopdf.RGBColor{R: 255, G: 255, B: 255},
+		TextColor: gopdf.RGBColor{R: 0, G: 0, B: 0},
+		FontSize:  10,
+	})
+
+	// Set the style for table header
+	table.SetHeaderStyle(gopdf.CellStyle{
+		BorderStyle: gopdf.BorderStyle{
+			Top:      true,
+			Left:     true,
+			Bottom:   true,
+			Right:    true,
+			Width:    2.0,
+			RGBColor: gopdf.RGBColor{R: 100, G: 150, B: 255},
+		},
+		FillColor: gopdf.RGBColor{R: 255, G: 200, B: 200},
+		TextColor: gopdf.RGBColor{R: 255, G: 100, B: 100},
+		Font:      "font2",
+		FontSize:  12,
+	})
+
+	table.SetCellStyle(gopdf.CellStyle{
+		BorderStyle: gopdf.BorderStyle{
+			Right:    true,
+			Bottom:   true,
+			Width:    0.5,
+			RGBColor: gopdf.RGBColor{R: 0, G: 0, B: 0},
+		},
+		FillColor: gopdf.RGBColor{R: 255, G: 255, B: 255},
+		TextColor: gopdf.RGBColor{R: 0, G: 0, B: 0},
+		Font:      "font1",
+		FontSize:  10,
+	})
+
+	// Draw the table
+	table.DrawTable()
+
+
+	// Save the PDF to the specified path
+     pdf.WritePdf("table.pdf")
+
+}
+```
+
+result:
+![table](./examples/table/table_example.jpg)
+
 
 visit https://github.com/oneplus1000/gopdfsample for more samples.

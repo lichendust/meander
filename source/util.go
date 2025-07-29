@@ -2,19 +2,6 @@
 	Meander
 	A portable Fountain utility for production writing
 	Copyright (C) 2022-2023 Harley Denham
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
@@ -38,16 +25,29 @@ func init() {
 	running_in_term = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
 }
 
+/*func left_trim_x(input string) int {
+	start := 0
+
+	for i, c := range input {
+		if c > utf8.RuneSelf && !unicode.IsSpace(c) {
+			return i
+		} else if ascii_space[c] == 0 {
+			return i
+		}
+		start = i
+	}
+
+	return start
+}*/
+
 func left_trim(input string) string {
 	start := 0
 
 	for ; start < len(input); start += 1 {
 		c := input[start]
-
 		if c >= utf8.RuneSelf {
 			return strings.TrimFunc(input[start:], unicode.IsSpace)
 		}
-
 		if ascii_space[c] == 0 {
 			break
 		}
@@ -58,8 +58,9 @@ func left_trim(input string) string {
 
 func left_trim_ignore_newlines(input string) string {
 	ascii_space['\n'] = 0
-	defer func() { ascii_space['\n'] = 1 }()
-	return left_trim(input)
+	output := left_trim(input)
+	ascii_space['\n'] = 1
+	return output
 }
 
 func right_trim(input string) string {
@@ -414,6 +415,8 @@ func short_words(t string) bool {
 	return false
 }
 
+var get_rune = utf8.DecodeRuneInString
+
 func title_case(input string) string {
 	input = normalise_text(input)
 
@@ -428,7 +431,7 @@ func title_case(input string) string {
 		buffer.Grow(len(word))
 
 		for len(word) > 0 {
-			c, width := utf8.DecodeRuneInString(word)
+			c, width := get_rune(word)
 
 			if buffer.Len() == 0 {
 				buffer.WriteRune(unicode.ToUpper(c))
@@ -440,7 +443,7 @@ func title_case(input string) string {
 				buffer.WriteRune(unicode.ToLower(c))
 				word = word[width:]
 
-				c, width = utf8.DecodeRuneInString(word)
+				c, width = get_rune(word)
 
 				buffer.WriteRune(unicode.ToUpper(c))
 				word = word[width:]
@@ -466,7 +469,7 @@ func word_count(text string) int {
 			break
 		}
 
-		r, w := utf8.DecodeRuneInString(text)
+		r, w := get_rune(text)
 		text = text[w:]
 
 		if unicode.IsLetter(r) || unicode.IsNumber(r) {
@@ -496,11 +499,11 @@ func load_file(source_file string) (string, bool) {
 }
 
 func load_file_normalise(source_file string) (string, bool) {
-	text, ok := load_file(source_file)
-	if !ok {
+	text, success := load_file(source_file)
+	if !success {
 		return "", false
 	}
-	return normalise_text(text), ok
+	return normalise_text(text), success
 }
 
 func write_file(path string, content []byte) bool {
@@ -581,7 +584,7 @@ func apply_color(input string) string {
 			break
 		}
 
-		r, w := utf8.DecodeRuneInString(input)
+		r, w := get_rune(input)
 		input = input[w:]
 
 		if r == '$' {
@@ -613,4 +616,9 @@ func apply_color(input string) string {
 	}
 
 	return buffer.String()
+}
+
+func is_only_punctuation(x string) bool {
+	r, _ := get_rune(x)
+	return unicode.IsPunct(r) && len(x) == utf8.RuneLen(r)
 }

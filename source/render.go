@@ -2,19 +2,6 @@
 	Meander
 	A portable Fountain utility for production writing
 	Copyright (C) 2022-2023 Harley Denham
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
@@ -27,6 +14,7 @@ import lib "github.com/signintech/gopdf"
 
 func set_color(doc *lib.GoPdf, color Color) {
 	doc.SetFillColor(color.R, color.G, color.B)
+	doc.SetTextColor(color.R, color.G, color.B)
 }
 
 func set_font(doc *lib.GoPdf, style Leaf_Type) {
@@ -47,39 +35,49 @@ func set_font(doc *lib.GoPdf, style Leaf_Type) {
 }
 
 func command_render(config *Config) {
-	text, ok := merge(config.source_file)
-	if !ok {
+	text, success := merge(config.source_file)
+	if !success {
 		return
 	}
 
-	data := init_data()
+	data := init_data(config)
 
 	syntax_parser(config, data, text)
+	paginate(config, data)
 
-	if len(config.paper_size) == 0 {
-		data.paper = lib.PageSizeLetter
-	} else {
-		data.paper = set_paper(config.paper_size)
+	if config.starred_show && len(data.config.starred_target) == 0 && len(data.Title.Revision) > 0 {
+		data.config.starred_target = strings.ToLower(data.Title.Revision)
 	}
 
-	format := SCREENPLAY
-	if len(config.template) > 0 {
-		if f, ok := is_valid_format(config.template); ok {
-			format = f
+	if config.starred_only {
+		page_count  := data.Content[len(data.Content) - 1].page
+		valid_pages := make([]bool, page_count + 1)
+
+		has_any := false
+
+		for i := range data.Content {
+			section := &data.Content[i]
+			if len(section.Revision) > 0 && strings.Contains(data.config.starred_target, section.Revision) {
+				valid_pages[section.page] = true
+				has_any = true
+			}
+		}
+
+		if !has_any {
+			eprintln("--revision-only: there are no revision tags in this document that match the input — PDF would be blank")
+			return
+		}
+
+		for i := range data.Content {
+			section := &data.Content[i]
+			section.skip = !valid_pages[section.page]
 		}
 	}
-	data.template = build_template(config, format, *data.paper)
-
-	if data.template.landscape {
-		data.paper.W, data.paper.H = data.paper.H, data.paper.W
-	}
-
-	paginate(config, data)
 
 	doc := new(lib.GoPdf)
 
 	doc.Start(lib.Config{
-		PageSize: *data.paper,
+		PageSize: config.paper_size,
 	})
 	doc.SetInfo(lib.PdfInfo{
 		Title:        clean_string(data.Title.Title),
@@ -102,7 +100,7 @@ func command_render(config *Config) {
 }
 
 func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
-	if !data.Title.has_any {
+	if !data.Title.has_any || data.config.starred_only {
 		return
 	}
 
@@ -112,7 +110,7 @@ func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
 	title_width := INCH * 4 // main title
 
 	start_x := INCH
-	start_y := MARGIN_TOP + PICA * 15
+	start_y := INCH * 3.5
 
 	align := data.template.title_page_align
 	if align == CENTER {
@@ -133,28 +131,28 @@ func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
 		if data.Title.Title != "" {
 			title.pos_x = start_x
 			title.pos_y = start_y
-			draw_section(doc, data.template, title)
+			draw_section(doc, data, title)
 			start_y += title.total_height + LINE_HEIGHT * 4
 		}
 
 		if data.Title.Credit != "" {
 			credit.pos_x = start_x
 			credit.pos_y = start_y
-			draw_section(doc, data.template, credit)
+			draw_section(doc, data, credit)
 			start_y += credit.total_height + LINE_HEIGHT * 2
 		}
 
 		if data.Title.Author != "" {
 			author.pos_x = start_x
 			author.pos_y = start_y
-			draw_section(doc, data.template, author)
+			draw_section(doc, data, author)
 			start_y += author.total_height + LINE_HEIGHT * 4
 		}
 
 		if data.Title.Source != "" {
 			source.pos_x = start_x
 			source.pos_y = start_y
-			draw_section(doc, data.template, source)
+			draw_section(doc, data, source)
 		}
 	}
 
@@ -166,30 +164,30 @@ func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
 		cont := quick_section(data, data.Title.Contact,   LEFT, LINE_HEIGHT, WIDTH)
 		copy := quick_section(data, data.Title.Copyright, LEFT, LINE_HEIGHT, WIDTH)
 
-		start_y = data.paper.H - INCH - (note.total_height + copy.total_height + cont.total_height) + LINE_HEIGHT
+		start_y = config.paper_size.H - INCH - (note.total_height + copy.total_height + cont.total_height) + LINE_HEIGHT
 
 		if data.Title.Notes != "" {
 			note.pos_x = start_x
 			note.pos_y = start_y
-			draw_section(doc, data.template, note)
+			draw_section(doc, data, note)
 			start_y += note.total_height
 		}
 
 		if data.Title.Contact != "" {
 			cont.pos_x = start_x
 			cont.pos_y = start_y
-			draw_section(doc, data.template, cont)
+			draw_section(doc, data, cont)
 			start_y += cont.total_height
 		}
 
 		if data.Title.Copyright != "" {
 			copy.pos_x = start_x
 			copy.pos_y = start_y
-			draw_section(doc, data.template, copy)
+			draw_section(doc, data, copy)
 		}
 	}
 
-	start_x = data.paper.W - INCH
+	start_x = config.paper_size.W - INCH
 
 	// Revision    DraftDate    Info
 	{
@@ -197,40 +195,40 @@ func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
 		drft := quick_section(data, data.Title.DraftDate, RIGHT, LINE_HEIGHT, WIDTH)
 		info := quick_section(data, data.Title.Info,      RIGHT, LINE_HEIGHT, WIDTH)
 
-		start_y = data.paper.H - INCH - (revs.total_height + drft.total_height + info.total_height) + LINE_HEIGHT
+		start_y = config.paper_size.H - INCH - (revs.total_height + drft.total_height + info.total_height) + LINE_HEIGHT
 
 		if data.Title.Revision != "" {
 			revs.pos_x = start_x
 			revs.pos_y = start_y
-			draw_section(doc, data.template, revs)
+			draw_section(doc, data, revs)
 			start_y += revs.total_height + LINE_HEIGHT
 		}
 
 		if data.Title.DraftDate != "" {
 			drft.pos_x = start_x
 			drft.pos_y = start_y
-			draw_section(doc, data.template, drft)
+			draw_section(doc, data, drft)
 			start_y += drft.total_height + LINE_HEIGHT
 		}
 
 		if data.Title.Info != "" {
 			info.pos_x = start_x
 			info.pos_y = start_y
-			draw_section(doc, data.template, info)
+			draw_section(doc, data, info)
 		}
 	}
 }
 
 func render_gender(config *Config, data *Fountain, doc *lib.GoPdf) {
-	if !config.include_gender {
+	if !config.include_gender || data.config.starred_only {
 		return
 	}
 
 	doc.AddPage()
 
-	start_y := MARGIN_TOP
+	start_y := data.template.margin_top
 
-	doc.SetXY(MARGIN_LEFT, start_y)
+	doc.SetXY(data.template.margin_left, start_y)
 
 	{
 		gender_title := fmt.Sprintf("%q %s", clean_string(data.Title.Title), GENDER_HEADING)
@@ -240,7 +238,7 @@ func render_gender(config *Config, data *Fountain, doc *lib.GoPdf) {
 			leaves: []Leaf{{NORMAL, false, gender_title}},
 		}
 		line_override(&t, UNDERLINE)
-		draw_line(doc, data.template, &t, MARGIN_LEFT, start_y)
+		draw_line(doc, data.template, &t, data.template.margin_left, start_y)
 	}
 
 	start_y += LINE_HEIGHT * 2
@@ -253,18 +251,19 @@ func render_gender(config *Config, data *Fountain, doc *lib.GoPdf) {
 }
 
 func render_toc(config *Config, data *Fountain, doc *lib.GoPdf) {
-	if !config.table_of_contents {
+	if !config.table_of_contents || data.config.starred_only {
 		return
 	}
 
-	doc.AddPage()
-
-	running_x := MARGIN_LEFT
-	running_y := MARGIN_TOP
-
+	has_any := false
 	widest_scene_no := 0
 	for i := range data.Content {
 		section := data.Content[i]
+
+		if section.Type > is_section || section.Type == SCENE {
+			has_any = true
+		}
+
 		if section.Type == SCENE {
 			w := rune_count(section.SceneNumber)
 			if w > widest_scene_no {
@@ -275,6 +274,15 @@ func render_toc(config *Config, data *Fountain, doc *lib.GoPdf) {
 	if widest_scene_no > 0 { widest_scene_no += 3 }
 	scene_inset := CHAR_WIDTH * float64(widest_scene_no)
 
+	if !has_any {
+		return
+	}
+
+	doc.AddPage()
+
+	running_x := data.template.margin_left
+	running_y := data.template.margin_top
+
 	for i := range data.Content {
 		section := data.Content[i]
 
@@ -282,6 +290,7 @@ func render_toc(config *Config, data *Fountain, doc *lib.GoPdf) {
 			new_section := copy_without_style(section)
 
 			if section.Type > is_section && data.template.kind == SCREENPLAY {
+				// @todo why is there extra spacing being added post-pagination???
 				running_y += LINE_HEIGHT
 				style_override(&new_section, UNDERLINE)
 			}
@@ -297,10 +306,10 @@ func render_toc(config *Config, data *Fountain, doc *lib.GoPdf) {
 				new_section.pos_x += scene_inset
 			}
 
-			draw_section(doc, data.template, &new_section)
+			draw_section(doc, data, &new_section)
 
 			page_number := fmt.Sprintf("%d", new_section.page)
-			doc.SetX(data.paper.W - MARGIN_RIGHT - float64(rune_count(page_number)) * CHAR_WIDTH)
+			doc.SetX(data.template.margin_right - float64(rune_count(page_number)) * CHAR_WIDTH)
 			doc.Text(page_number)
 
 			set_font(doc, NO_TYPE)
@@ -312,9 +321,9 @@ func render_toc(config *Config, data *Fountain, doc *lib.GoPdf) {
 			running_y += LINE_HEIGHT
 		}
 
-		if running_y > data.paper.H - MARGIN_BOTTOM {
+		if running_y > config.paper_size.H - data.template.margin_bottom {
 			doc.AddPage()
-			running_y = MARGIN_TOP
+			running_y = data.template.margin_top
 		}
 	}
 }
@@ -336,12 +345,16 @@ func render_content(config *Config, data *Fountain, doc *lib.GoPdf) {
 		if section.page > page_number {
 			page_number = section.page
 			doc.AddPage()
+
+			if config.template == STORYBOARD {
+				draw_board(data, doc)
+			}
 		}
 
 		if section.Type == SCENE && config.scenes != SCENE_REMOVE {
 			text_width := float64(rune_count(section.SceneNumber)) * CHAR_WIDTH
-			right_x    := data.paper.W - MARGIN_RIGHT - text_width
-			left_x     := MARGIN_LEFT - INCH / 2 - text_width
+			right_x    := data.template.margin_right - text_width
+			left_x     := data.template.margin_left - INCH / 2 - text_width
 
 			set_font(doc, NO_TYPE)
 
@@ -349,19 +362,18 @@ func render_content(config *Config, data *Fountain, doc *lib.GoPdf) {
 			doc.SetX(left_x)
 			doc.Text(section.SceneNumber)
 
-			draw_section(doc, data.template, section)
+			draw_section(doc, data, section)
 
 			doc.SetX(right_x)
 			doc.Text(section.SceneNumber)
-
 			continue
 		}
 
-		draw_section(doc, data.template, section)
+		draw_section(doc, data, section)
 	}
 }
 
-func draw_section(doc *lib.GoPdf, template *Template, section *Section) {
+func draw_section(doc *lib.GoPdf, data *Fountain, section *Section) {
 	if section == nil {
 		return
 	}
@@ -369,7 +381,7 @@ func draw_section(doc *lib.GoPdf, template *Template, section *Section) {
 		return
 	}
 
-	set_color(doc, template.text_color)
+	set_color(doc, data.template.text_color)
 
 	if section.is_raw {
 		set_font(doc, NO_TYPE)
@@ -385,6 +397,7 @@ func draw_section(doc *lib.GoPdf, template *Template, section *Section) {
 
 		doc.SetXY(pos_x, section.pos_y)
 		doc.Text(section.Text)
+		draw_star(doc, data, section, section.pos_y)
 		return
 	}
 
@@ -408,7 +421,8 @@ func draw_section(doc *lib.GoPdf, template *Template, section *Section) {
 			pos_x -= CHAR_WIDTH * float64(line.length)
 		}
 
-		draw_line(doc, template, &line, pos_x, pos_y)
+		draw_line(doc, data.template, &line, pos_x, pos_y)
+		draw_star(doc, data, section, pos_y)
 		pos_y += section.line_height
 	}
 }
@@ -480,7 +494,7 @@ func render_gender_data(data *Fountain, doc *lib.GoPdf, data_set *Analytics_Set,
 
 	{
 		t := Line{leaves:[]Leaf{{ITALIC, false, title}}}
-		draw_line(doc, data.template, &t, MARGIN_LEFT, *start_y)
+		draw_line(doc, data.template, &t, data.template.margin_left, *start_y)
 	}
 
 	set_font(doc, NO_TYPE)
@@ -492,7 +506,7 @@ func render_gender_data(data *Fountain, doc *lib.GoPdf, data_set *Analytics_Set,
 			continue
 		}
 
-		running_x := MARGIN_LEFT
+		running_x := data.template.margin_left
 
 		doc.SetXY(running_x, *start_y)
 
@@ -543,4 +557,36 @@ func quick_section(data *Fountain, text string, justify uint8, line_height, widt
 	}
 
 	return section
+}
+
+func draw_star(doc *lib.GoPdf, data *Fountain, section *Section, pos_y float64) {
+	if !data.config.starred_show {
+		return
+	}
+
+	if len(section.Revision) > 0 && strings.Contains(data.config.starred_target, section.Revision) {
+		// @todo might do left/right dual stars at some point
+		/*if is_character_train(section.Type) && section.Level == 1 {
+			doc.SetX(data.template.starred_left)
+		} else {
+			doc.SetX(data.template.starred_right)
+		}
+		doc.SetY(pos_y + data.template.starred_nudge)*/
+
+		doc.SetXY(data.template.starred_margin, pos_y + data.template.starred_nudge)
+		doc.Text("*")
+	}
+}
+
+func draw_board(data *Fountain, doc *lib.GoPdf) {
+	x := MARGIN_LEFT + data.template.types[ACTION].width + INCH / 2
+	y := MARGIN_TOP - PICA * 0.7
+
+	h := (data.config.paper_size.H - MARGIN_TOP - MARGIN_BOTTOM - PICA * 1.5) / 3
+	w := h * 2.35
+
+	for i := float64(0); i < 3; i += 1 {
+		y := y + (h + PICA) * i
+		doc.Rectangle(x, y, x + w, y + h, "", 0, 0)
+	}
 }

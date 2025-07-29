@@ -2,19 +2,6 @@
 	Meander
 	A portable Fountain utility for production writing
 	Copyright (C) 2022-2023 Harley Denham
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
@@ -27,12 +14,12 @@ import "strings"
 const BAR_LENGTH = 20
 
 func command_gender(config *Config) {
-	text, ok := merge(config.source_file)
-	if !ok {
+	text, success := merge(config.source_file)
+	if !success {
 		return
 	}
 
-	data := init_data()
+	data := init_data(config)
 	syntax_parser(config, data, text)
 
 	println_color("\n   ", clean_string(data.Title.Title), "Gender Analysis")
@@ -65,12 +52,11 @@ func (oc Analytics_Entries) Less(i, j int) bool { return oc[i].value > oc[j].val
 func (oc Analytics_Entries) Swap(i, j int)      { oc[i], oc[j] = oc[j], oc[i] }
 
 func crunch_chars_by_gender(data *Fountain) *Analytics_Set {
-	array := make(Analytics_Entries, 0, 12)
+	array   := make(Analytics_Entries, 0, 64)
+	counter := make(map[string]int,       64)
 
 	total_chars    := 0
 	longest_gender := 0
-
-	counter := make(map[string]int, 12)
 
 	for _, c := range data.Characters {
 		if c.Gender == "ignore" {

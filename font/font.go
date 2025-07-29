@@ -9,6 +9,7 @@ const RESERVED_NAME = "Courier Prime"
 const LICENSE_TEXT  = `Copyright (C) 2013, Quote-Unquote Apps
 (quoteunquoteapps.com) with Reserved Font Name Courier Prime.`
 
+const FONT_SIZE = 12
 const CHAR_WIDTH float64 = 7.188
 
 var (

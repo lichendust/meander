@@ -32,9 +32,9 @@ This is an explicit, immutable goal of Meander, and it achieves this by being ex
 
 Introducing 'proper' font sourcing on a platform requires explicit, tailored support and the introduction of large dependencies, additional compilers and the loss of other features.
 
-Not all platforms, either morally or technically, support TTF fonts, let alone provide a way to install and retrieve them with a simple interface and API.  There's very little consistency in the *existence* of mechanisms for retrieving fonts, let alone semantic consistency in how they might work, or even internal consistency in how fonts are stored and named and (looking at you Windows).
+Not all platforms, either morally or technically, support TTF fonts, let alone provide a way to install and retrieve them with a simple interface and API.  There's very little consistency in the *existence* of mechanisms for retrieving fonts, let alone semantic consistency in how they might work, or even internal consistency in how fonts are stored and named (looking at you Windows).
 
-By using a 'canonical' Meander font, for which we've chosen *Courier Prime Sans*, we can ensure that every platform we target can be guaranteed to work, we remove the need to validate hundreds of variable-quality fonts and makes Meander 100% portable and idempotent.
+By using a 'canonical' Meander font, for which we've chosen *Courier Prime Sans*, we can ensure that every platform we target can be guaranteed to work, we remove the need to validate hundreds of variable-quality fonts and make Meander 100% portable and idempotent.
 
 To quote a tragically quotable scumbag:
 
@@ -68,4 +68,4 @@ To that effect, Meander provides a 'vomit' command in the form of —
 
 Meander also provides a `credit` command that provides full attribution for the bundled fonts.
 
-[^1]: Their URL structure is also insane and that link is definitely going to die, so shout at me if it's ever broken.
+[^1]: Their URL structure is also insane and that link is definitely going to rot eventually, so shout at me if it's ever broken.

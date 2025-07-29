@@ -43,3 +43,9 @@ $1Force Hidden Syntaxes$0
     $1--notes$0
     $1--synopses$0
     $1--sections$0
+
+$1Starred Revision Markers$0
+------------------------
+
+    $1--stars$0
+    $1--stars-only$0

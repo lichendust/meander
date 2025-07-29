@@ -2,19 +2,6 @@
 	Meander
 	A portable Fountain utility for production writing
 	Copyright (C) 2022-2023 Harley Denham
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
@@ -38,14 +25,25 @@ func style_override(section *Section, style Leaf_Type) {
 	}
 }
 
+/*
+	@bug in the inline parser: markdown characters with
+	nothing before or after should be treated as regular text,
+	but right now some of them become blank styling
+	try
+
+		> * * * <
+
+	for an example
+*/
+
 // @note some of the inside_dual_dialogue state
 // stuff is a confusing read -- clean up or rework
 func paginate(config *Config, data *Fountain) {
 	template := data.template
 
 	last_type       := WHITESPACE
-	running_height  := MARGIN_TOP
-	max_page_height := data.paper.H - MARGIN_BOTTOM
+	running_height  := template.margin_top
+	max_page_height := config.paper_size.H - template.margin_bottom
 	first_on_page   := true
 	page_number     := 1
 
@@ -53,7 +51,7 @@ func paginate(config *Config, data *Fountain) {
 	data.counter_lookup["scene"] = &Counter{COUNTER, 0}
 
 	// used for when we have to jump back
-	old_running_height   := MARGIN_TOP
+	old_running_height   := template.margin_top
 	margin_adjust_dual   := float64(0)
 	delayed_page_number  := false
 	inside_dual_dialogue := 0
@@ -68,8 +66,8 @@ func paginate(config *Config, data *Fountain) {
 	new_page := func() {
 		do_header(data, data.footer, FOOTER, page_number)
 
-		old_running_height = MARGIN_TOP
-		running_height = MARGIN_TOP
+		old_running_height = template.margin_top
+		running_height = template.margin_top
 		page_number += 1
 		first_on_page = true
 
@@ -149,7 +147,7 @@ func paginate(config *Config, data *Fountain) {
 			}
 
 			if inside_dual_dialogue == 2 {
-				margin_adjust_dual = data.paper.W / 2 - MARGIN_LEFT / 2
+				margin_adjust_dual = data.template.dual_right_offset
 			} else {
 				margin_adjust_dual = 0
 			}
@@ -166,7 +164,7 @@ func paginate(config *Config, data *Fountain) {
 
 			section.line_height = t.line_height
 			section.justify     = t.justify
-			section.lines = break_section(data, section, t.width, t.para_indent, t.style != NORMAL)
+			section.lines       = break_section(data, section, t.width, t.para_indent, t.style != NORMAL)
 
 			if t.trail_height > 0 && running_height >= max_page_height - t.trail_height {
 				new_page()
@@ -178,13 +176,13 @@ func paginate(config *Config, data *Fountain) {
 			}
 
 			section.pos_y = running_height
-			section.page = page_number
+			section.page  = page_number
 
 			switch t.justify {
 			default:
-				section.pos_x = template.left_margin + t.margin
+				section.pos_x = template.margin_left + t.margin
 			case RIGHT:
-				section.pos_x = template.right_margin - t.margin
+				section.pos_x = template.margin_right - t.margin
 			case CENTER:
 				section.pos_x = template.center_line
 			}
@@ -235,7 +233,7 @@ func paginate(config *Config, data *Fountain) {
 						local_t := template.types[PARENTHETICAL + dual_offset]
 
 						data.Content = append(data.Content, Section{
-							pos_x:   MARGIN_LEFT + local_t.margin + margin_adjust_dual,
+							pos_x:   template.margin_left + local_t.margin + margin_adjust_dual,
 							pos_y:   old_running_height,
 							justify: local_t.justify,
 							page:    old_page_number,
@@ -256,7 +254,7 @@ func paginate(config *Config, data *Fountain) {
 
 						// @todo we don't check if this is raw or not -- do that
 						data.Content = append(data.Content, Section{
-							pos_x:   MARGIN_LEFT + local_t.margin + margin_adjust_dual,
+							pos_x:   template.margin_left + local_t.margin + margin_adjust_dual,
 							pos_y:   running_height,
 							justify: local_t.justify,
 							page:    page_number,
@@ -272,6 +270,12 @@ func paginate(config *Config, data *Fountain) {
 					section.lines = section.lines[page_break_length:]
 					section.pos_y = running_height
 					section.page  = page_number
+
+					// @note this is a hot-fix we need to test a bit better.
+					// when paragraphs whose style has para_indent are broken
+					// across a page break, the second element gets indented
+					// unexpectedly.  this should stop that.
+					section.para_indent = 0
 
 					if needs_page_reset {
 						page_number = old_page_number
@@ -300,13 +304,15 @@ func paginate(config *Config, data *Fountain) {
 
 		case WHITESPACE:
 			if !first_on_page {
-				level := section.Level
+				if !template.ignore_whitespace {
+					level := section.Level
 
-				if last_type < is_printable {
-					level -= 1
+					if last_type < is_printable {
+						level -= 1
+					}
+
+					running_height += template.line_height * float64(level)
 				}
-
-				running_height += template.line_height * float64(level)
 
 				if running_height > max_page_height {
 					new_page()
@@ -316,6 +322,9 @@ func paginate(config *Config, data *Fountain) {
 
 		last_type = section.Type
 	}
+
+	// add any trailing footers on the final page
+	do_header(data, data.footer, FOOTER, page_number)
 
 	// this solves the 'corrupted' order of dual dialogue
 	// entries when they break across pages.
@@ -331,18 +340,19 @@ func do_header(data *Fountain, text string, the_type Line_Type, page_number int)
 		return
 	}
 
-	y_pos := data.template.header_height
+	line_height := data.template.line_height
 
+	y_pos := data.template.header_margin
 	if the_type == FOOTER {
-		y_pos = data.template.footer_height
+		y_pos = data.template.footer_margin
 	}
 
 	split := strings.SplitN(text, "|", 3)
 
 	switch len(split) {
 	case 1:
-		one := quick_section(data, split[0], LEFT, LINE_HEIGHT, INCH * 5)
-		one.pos_x = MARGIN_LEFT
+		one := quick_section(data, split[0], LEFT, line_height, INCH * 5)
+		one.pos_x = data.template.margin_left
 		one.pos_y = y_pos
 		one.Type  = the_type
 		one.page  = page_number
@@ -350,14 +360,14 @@ func do_header(data *Fountain, text string, the_type Line_Type, page_number int)
 		data.Content = append(data.Content, *one)
 
 	case 2:
-		one := quick_section(data, split[0], LEFT, LINE_HEIGHT, INCH * 3)
-		one.pos_x = MARGIN_LEFT
+		one := quick_section(data, split[0], LEFT, line_height, INCH * 3)
+		one.pos_x = data.template.margin_left
 		one.pos_y = y_pos
 		one.Type  = the_type
 		one.page  = page_number
 
-		two := quick_section(data, split[1], RIGHT, LINE_HEIGHT, INCH * 3)
-		two.pos_x = data.paper.W - MARGIN_RIGHT
+		two := quick_section(data, split[1], RIGHT, line_height, INCH * 3)
+		two.pos_x = data.template.margin_right
 		two.pos_y = y_pos
 		two.Type  = the_type
 		two.page  = page_number
@@ -366,20 +376,20 @@ func do_header(data *Fountain, text string, the_type Line_Type, page_number int)
 		data.Content = append(data.Content, *two)
 
 	case 3:
-		one := quick_section(data, split[0], LEFT, LINE_HEIGHT, INCH * 2)
-		one.pos_x = MARGIN_LEFT
+		one := quick_section(data, split[0], LEFT, line_height, INCH * 2)
+		one.pos_x = data.template.margin_left
 		one.pos_y = y_pos
 		one.Type  = the_type
 		one.page  = page_number
 
-		two := quick_section(data, split[1], CENTER, LINE_HEIGHT, INCH * 2)
-		two.pos_x = data.paper.W / 2
+		two := quick_section(data, split[1], CENTER, line_height, INCH * 2)
+		two.pos_x = data.template.center_line
 		two.pos_y = y_pos
 		two.Type  = the_type
 		two.page  = page_number
 
-		three := quick_section(data, split[2], RIGHT, LINE_HEIGHT, INCH * 2)
-		three.pos_x = data.paper.W - MARGIN_RIGHT
+		three := quick_section(data, split[2], RIGHT, line_height, INCH * 2)
+		three.pos_x = data.template.margin_right
 		three.pos_y = y_pos
 		three.Type  = the_type
 		three.page  = page_number
@@ -400,7 +410,7 @@ func break_section(data *Fountain, section *Section, width float64, para_indent 
 
 	max_width := 0
 	if width == 0 {
-		max_width = int((data.paper.W - MARGIN_LEFT - MARGIN_RIGHT) / CHAR_WIDTH)
+		max_width = int((data.template.margin_right - data.template.margin_left) / CHAR_WIDTH)
 	} else {
 		max_width = int(width / CHAR_WIDTH)
 	}
@@ -491,13 +501,10 @@ func break_section(data *Fountain, section *Section, width float64, para_indent 
 					x, w := extract_letters_or_numbers(input[byte_width + 1:])
 					byte_width += w + 1
 
-					is_numbers := is_all_numbers(x)
-					is_letters := is_all_letters(x)
-
-					if is_numbers {
+					if is_all_numbers(x) {
 						v, _ := strconv.Atoi(x)
 						counter_reset = v
-					} else if is_letters {
+					} else if is_all_letters(x) {
 						the_type = COUNTER_ALPHA
 						counter_reset = alphabet_to_int(x)
 					}
@@ -782,7 +789,7 @@ func break_section(data *Fountain, section *Section, width float64, para_indent 
 	current_type := NORMAL
 	cancel_space := false
 
-	for _, entry := range the_list {
+	for entry_index, entry := range the_list {
 		if entry.leaf_type != NORMAL {
 			if entry.leaf_type > does_break {
 				if line_buffer.Len() > 0 {
@@ -806,7 +813,26 @@ func break_section(data *Fountain, section *Section, width float64, para_indent 
 			}
 		}
 
-		if line_length + entry.space_width > test_width || entry.leaf_type == NEWLINE || entry.leaf_type == NORMAL && line_length + entry.text_width > test_width {
+		// test if we need to wrap
+		needs_wrap := entry.leaf_type == NEWLINE ||
+			line_length + entry.space_width > test_width ||
+			entry.leaf_type == NORMAL && line_length + entry.text_width > test_width
+
+		// if all of these are false, do an additional check for trailing punctuation
+		// this catches an edge case where a comma or ellipsis might get orphaned if
+		// it's also part of a font-change
+		if !needs_wrap && entry.leaf_type == NORMAL {
+			if entry_index < len(the_list) - 1 {
+				next := the_list[entry_index + 1]
+
+				needs_wrap = next.space_width == 0 &&
+					is_only_punctuation(next.text) &&
+					line_length + entry.text_width + next.text_width > test_width
+			}
+		}
+
+		// execute the wrap
+		if needs_wrap {
 			if line_buffer.Len() > 0 {
 				leaf_stack = append(leaf_stack, Leaf{
 					leaf_type:  current_type,

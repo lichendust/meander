@@ -1,10 +1,10 @@
-module github.com/qxoko/meander
+module github.com/lichendust/meander
 
 go 1.20
 
 require (
-	github.com/mattn/go-isatty v0.0.19
-	github.com/signintech/gopdf v0.19.0
+	github.com/mattn/go-isatty v0.0.20
+	github.com/signintech/gopdf v0.33.0
 )
 
 require (

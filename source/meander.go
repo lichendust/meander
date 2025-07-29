@@ -2,31 +2,20 @@
 	Meander
 	A portable Fountain utility for production writing
 	Copyright (C) 2022-2023 Harley Denham
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
 
 import "os"
 
-const VERSION = "v0.2.3"
+import lib "github.com/signintech/gopdf"
+
+const VERSION = "v0.3.0"
 const MEANDER = "Meander " + VERSION
 
 func main() {
-	config, ok := get_arguments()
-	if !ok {
+	config, success := get_arguments()
+	if !success {
 		return
 	}
 
@@ -93,20 +82,26 @@ const (
 type Config struct {
 	command uint8
 
-	scenes     uint8
-	template   string
-	paper_size string
-
+	scenes            uint8
 	include_notes     bool
 	include_synopses  bool
 	include_sections  bool
-	write_gender      bool
 	include_gender    bool
 	table_of_contents bool
-	raw_convert       bool
 
-	source_file string
-	output_file string
+	template_set    bool
+	template        Format
+	template_string string
+
+	paper_set  bool
+	paper_size lib.Rect
+
+	starred_show   bool
+	starred_only   bool
+	starred_target string
+
+	source_file  string
+	output_file  string
 }
 
 func arg_scene_type(x string) (uint8, bool) {
@@ -121,226 +116,188 @@ func arg_scene_type(x string) (uint8, bool) {
 	return SCENE_INPUT, false
 }
 
-// extracts arguments in the array as
-// either --bool or --name <data>
-func pull_argument(args []string) (string, string) {
-	if len(args) == 0 {
-		return "", ""
-	}
-
-	if len(args[0]) >= 1 {
-		n := count_rune(args[0], '-')
-		a := args[0]
-
-		if n > 0 {
-			a = a[n:]
-		} else {
-			return "", ""
-		}
-
-		if len(args[1:]) >= 1 {
-			b := args[1]
-
-			if len(b) > 0 && b[0] != '-' {
-				return a, b
-			}
-		}
-
-		return a, ""
-	}
-
-	return "", ""
-}
-
-// process the user input
 func get_arguments() (*Config, bool) {
+	const SEE_HELP_RENDER = "see $1meander help render$0 for full usage"
+
 	args := os.Args[1:]
 
-	counter := 0
+	config := new(Config)
+
+	max     := len(args) - 1
+	index   := 0
 	patharg := 0
 
-	has_errors := false
-
-	conf := new(Config)
-
 	for {
-		args = args[counter:]
-
-		if len(args) == 0 {
+		if index > max {
 			break
 		}
 
-		counter = 0
+		arg := args[index]
+		index += 1
 
-		if len(args) > 0 {
-			switch args[0] {
-			case "render":
-				conf.command = COMMAND_RENDER
-				args = args[1:]
-				continue
+		switch arg {
+		case "render":
+			config.command = COMMAND_RENDER
+			continue
 
-			case "merge":
-				conf.command = COMMAND_MERGE
-				args = args[1:]
-				continue
+		case "merge":
+			config.command = COMMAND_MERGE
+			continue
 
-			case "data":
-				conf.command = COMMAND_DATA
-				args = args[1:]
-				continue
+		case "data":
+			config.command = COMMAND_DATA
+			continue
 
-			case "gender":
-				conf.command = COMMAND_GENDER
-				args = args[1:]
-				continue
+		case "gender":
+			config.command = COMMAND_GENDER
+			continue
 
-			case "convert":
-				conf.command = COMMAND_CONVERT
-				args = args[1:]
-				continue
+		case "convert":
+			config.command = COMMAND_CONVERT
+			continue
 
-			case "help":
-				conf.command = COMMAND_HELP
-				return conf, true // exit immediately
-
-			case "version":
-				conf.command = COMMAND_VERSION
-				return conf, true // exit immediately
-
-			case "credit":
-				conf.command = COMMAND_CREDIT
-				return conf, true // exit immediately
-
-			case "fonts":
-				conf.command = COMMAND_FONTS
-				return conf, true // exit immediately
-			}
-		}
-
-		a, b := pull_argument(args[counter:])
-
-		counter += 1
-
-		switch a {
-		case "":
-			// continue to below
+		case "help":
+			config.command = COMMAND_HELP
+			return config, true
 
 		case "version":
-			conf.command = COMMAND_VERSION
-			return conf, true
+			config.command = COMMAND_VERSION
+			return config, true
 
-		case "help", "h":
-			// psychological failsafe —
-			// the user is most likely
-			// to try "--help" or "-h" first
-			conf.command = COMMAND_HELP
-			return conf, true
+		case "credit":
+			config.command = COMMAND_CREDIT
+			return config, true
 
-		case "notes", "n":
-			conf.include_notes = true
+		case "fonts":
+			config.command = COMMAND_FONTS
+			return config, true
+		}
+
+		// there shouldn't be any arguments shorter than 2
+		// that we aren't expecting as additional values
+		if len(arg) < 2 {
+			eprintf("error: unknown argument %q", arg)
+			return config, false
+		}
+
+		if arg[:2] == "--" {
+			arg = arg[2:]
+		} else if arg[0] == '-' {
+			arg = arg[1:]
+		} else {
+			switch patharg {
+			case 0:
+				config.source_file = arg
+			case 1:
+				config.output_file = arg
+			default:
+				eprintln("error: too many path arguments")
+				return config, false
+			}
+			patharg += 1
 			continue
+		}
+
+		switch arg {
+		case "toc":
+			config.table_of_contents = true
+
+		case "notes":
+			config.include_notes = true
 
 		case "synopses":
-			conf.include_synopses = true
-			continue
+			config.include_synopses = true
 
 		case "sections":
-			conf.include_sections = true
-			continue
-
-		case "raw":
-			conf.raw_convert = true
-			continue
-
-		case "update-gender", "u":
-			conf.write_gender = true
-			continue
+			config.include_sections = true
 
 		case "print-gender", "g":
-			conf.include_gender = true
-			continue
+			config.include_gender = true
+
+		case "stars-only":
+			config.starred_only = true
+			fallthrough
+
+		case "stars":
+			config.starred_show = true
+
+			if index > max {
+				continue
+			}
+			if args[index][0] == '-' {
+				continue
+			}
+
+			config.starred_target = args[index]
+			index += 1
 
 		case "scene", "s":
-			if b != "" {
-				if x, ok := arg_scene_type(b); ok {
-					conf.scenes = x
-				} else {
-					eprintf("invalid scene flag: %q", b)
-				}
-				counter += 1
-			} else {
-				eprintln("args: missing scene mode")
-				has_errors = true
+			if index > max {
+				eprintln(apply_color("error: the --scene flag requires a value\n\n    input\n    remove\n    generate\n\n" + SEE_HELP_RENDER))
+				return config, false
 			}
-			continue
+
+			x, success := arg_scene_type(args[index])
+			if !success {
+				eprintln("invalid scene type")
+				return config, false
+			}
+			config.scenes = x
+			index += 1
 
 		case "format", "f":
-			if b != "" {
-				counter += 1
-
-				if _, ok := is_valid_format(b); ok {
-					conf.template = b
-					continue
-				}
+			if index > max {
+				eprintln(apply_color("error: the --format flag requires a value\n\n    screenplay\n    stageplay\n    graphicnovel\n    manuscript\n\n" + SEE_HELP_RENDER))
+				return config, false
 			}
 
-			eprintln("args: bad format")
-			has_errors = true
-			continue
+			config.template_set = true
+			config.template_string = args[index]
+
+			x, success := is_valid_format(config.template_string)
+			if success {
+				config.template = x
+			}
+			index += 1
 
 		case "paper", "p":
-			if b != "" {
-				conf.paper_size = b
-				counter += 1
-
-				if set_paper(conf.paper_size) != nil {
-					continue
-				}
+			if index > max {
+				eprintln(apply_color("error: the --paper flag requires a value\n\n    USLetter\n    USLegal\n    A4\n\n" + SEE_HELP_RENDER))
+				return config, false
 			}
 
-			eprintln("args: bad paper size")
-			has_errors = true
-			continue
-
-		default:
-			eprintf("args: %q flag is unknown", a)
-			has_errors = true
-
-			if b != "" {
-				counter += 1
+			x, success := set_paper(args[index])
+			if !success {
+				eprintln("error: invalid paper size")
 			}
-		}
 
-		switch patharg {
-		case 0:
-			conf.source_file = args[0]
-		case 1:
-			conf.output_file = args[0]
+			config.paper_set = true
+			config.paper_size = x
+			index += 1
+
 		default:
-			eprintln("args: too many path arguments")
-			has_errors = true
+			eprintf("error: %q flag is unknown", arg)
+			return config, false
 		}
-
-		patharg += 1
 	}
 
-	if conf.source_file == "" {
-		eprintln("args: no input file specified or detected!")
-		has_errors = true
+	if config.source_file == "" {
+		eprintln("error: no input file specified!")
+		return config, false
 	}
 
-	if conf.output_file == "" {
-		switch conf.command {
+	if config.output_file == "" {
+		switch config.command {
 		case COMMAND_RENDER:
-			conf.output_file = rewrite_ext(conf.source_file, ".pdf")
+			config.output_file = rewrite_ext(config.source_file, ".pdf")
 		case COMMAND_MERGE:
-			conf.output_file = rewrite_ext(conf.source_file, "_merged" + FOUNTAIN_EXT)
+			config.output_file = rewrite_ext(config.source_file, "_merged" + FOUNTAIN_EXT)
 		case COMMAND_CONVERT:
-			conf.output_file = rewrite_ext(conf.source_file, FOUNTAIN_EXT)
+			config.output_file = rewrite_ext(config.source_file, FOUNTAIN_EXT)
 		case COMMAND_DATA:
-			conf.output_file = rewrite_ext(conf.source_file, ".json")
+			config.output_file = rewrite_ext(config.source_file, ".json")
 		}
 	}
 
-	return conf, !has_errors
+	return config, true
 }

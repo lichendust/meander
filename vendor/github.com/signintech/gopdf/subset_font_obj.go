@@ -25,6 +25,7 @@ type SubsetFontObj struct {
 	ttfFontOption         TtfOption
 	funcKernOverride      FuncKernOverride
 	funcGetRoot           func() *GoPdf
+	addCharsBuff          []rune
 }
 
 func (s *SubsetFontObj) init(funcGetRoot func() *GoPdf) {
@@ -134,10 +135,10 @@ func (s *SubsetFontObj) SetTTFData(data []byte) error {
 
 // AddChars add char to map CharacterToGlyphIndex
 func (s *SubsetFontObj) AddChars(txt string) (string, error) {
-	var buff []rune
+	s.addCharsBuff = s.addCharsBuff[:0]
 	for _, runeValue := range txt {
 		if s.CharacterToGlyphIndex.KeyExists(runeValue) {
-			buff = append(buff, runeValue)
+			s.addCharsBuff = append(s.addCharsBuff, runeValue)
 			continue
 		}
 		glyphIndex, err := s.CharCodeToGlyphIndex(runeValue)
@@ -152,15 +153,15 @@ func (s *SubsetFontObj) AddChars(txt string) (string, error) {
 				s.CharacterToGlyphIndex.Set(runeValueReplace, glyphIndexReplace) // [runeValue] = glyphIndex
 			}
 			//end: try to find rune for replace
-			buff = append(buff, runeValueReplace)
+			s.addCharsBuff = append(s.addCharsBuff, runeValueReplace)
 			continue
 		} else if err != nil {
 			return "", err
 		}
 		s.CharacterToGlyphIndex.Set(runeValue, glyphIndex) // [runeValue] = glyphIndex
-		buff = append(buff, runeValue)
+		s.addCharsBuff = append(s.addCharsBuff, runeValue)
 	}
-	return string(buff), nil
+	return string(s.addCharsBuff), nil
 }
 
 /*
@@ -326,7 +327,7 @@ func (s *SubsetFontObj) GetUnderlineThicknessPx(fontSize float64) float64 {
 	return (float64(s.ttfp.UnderlineThickness()) / float64(s.ttfp.UnitsPerEm())) * fontSize
 }
 
-// GetUnderlinePosition underline postion.
+// GetUnderlinePosition underline position.
 func (s *SubsetFontObj) GetUnderlinePosition() int {
 	return s.ttfp.UnderlinePosition()
 }
