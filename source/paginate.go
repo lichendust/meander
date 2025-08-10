@@ -36,6 +36,27 @@ func style_override(section *Section, style Leaf_Type) {
 	for an example
 */
 
+func find_header_or_footer(data *Fountain, search_array []Section, search_depth int) {
+	outer: for index, item := range search_array {
+		if index > search_depth {
+			break
+		}
+
+		switch item.Type {
+		case PAGE_BREAK:
+			break outer
+
+		case HEADER:
+			data.header = item.Text
+			break outer
+
+		case FOOTER:
+			data.footer = item.Text
+			break outer
+		}
+	}
+}
+
 // @note some of the inside_dual_dialogue state
 // stuff is a confusing read -- clean up or rework
 func paginate(config *Config, data *Fountain) {
@@ -43,7 +64,7 @@ func paginate(config *Config, data *Fountain) {
 
 	last_type       := WHITESPACE
 	running_height  := template.margin_top
-	max_page_height := config.paper_size.H - template.margin_bottom
+	max_page_height := template.paper.H - template.margin_bottom
 	first_on_page   := true
 	page_number     := 1
 
@@ -121,11 +142,12 @@ func paginate(config *Config, data *Fountain) {
 		section.skip = t.skip
 
 		if running_height >= max_page_height && inside_dual_dialogue != 1 {
+			find_header_or_footer(data, original_content[content_index:], 4)
 			new_page()
 
 			if inside_dual_dialogue == 2 {
 				delayed_page_number = false
-				first_on_page = false
+				first_on_page       = false
 			}
 		}
 
@@ -167,6 +189,7 @@ func paginate(config *Config, data *Fountain) {
 			section.lines       = break_section(data, section, t.width, t.para_indent, t.style != NORMAL)
 
 			if t.trail_height > 0 && running_height >= max_page_height - t.trail_height {
+				find_header_or_footer(data, original_content[content_index:], 4)
 				new_page()
 				first_on_page = false
 
@@ -197,7 +220,7 @@ func paginate(config *Config, data *Fountain) {
 				page_break_length := 0
 
 				for i := 1; i <= len(section.lines); i += 1 {
-					if running_height + float64(i) * section.line_height > max_page_height {
+					if running_height + float64(i) * section.line_height > max_page_height - t.trail_height {
 						page_break_length = i
 						break
 					}
@@ -211,6 +234,7 @@ func paginate(config *Config, data *Fountain) {
 					old_running_height := running_height + float64(page_break_length) * section.line_height
 					old_page_number    := page_number
 
+					find_header_or_footer(data, original_content[content_index:], 4)
 					new_page()
 					first_on_page = false
 
@@ -300,6 +324,7 @@ func paginate(config *Config, data *Fountain) {
 			data.footer = section.Text
 
 		case PAGE_BREAK:
+			find_header_or_footer(data, original_content[content_index:], 4)
 			new_page()
 
 		case WHITESPACE:
@@ -315,6 +340,7 @@ func paginate(config *Config, data *Fountain) {
 				}
 
 				if running_height > max_page_height {
+					find_header_or_footer(data, original_content[content_index:], 4)
 					new_page()
 				}
 			}
@@ -721,7 +747,7 @@ func break_section(data *Fountain, section *Section, width float64, para_indent 
 					if x._type == COUNTER_ALPHA {
 						if x.value < 1 { x.value = 1 }
 
-						entry.text = alphabetical_increment(x.value)
+						entry.text = alphabetical_increment(x.value, nil)
 					} else {
 						entry.text = fmt.Sprintf("%d", x.value)
 					}

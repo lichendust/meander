@@ -53,17 +53,14 @@ const (
 )
 
 type Template struct {
-	kind       Format
-	landscape  bool
-
-	// @todo this is redundant rn, but we're making this the new standard in the refactor
+	kind  Format
 	paper lib.Rect
 
-	title_page_align uint8
+	landscape         bool
 	ignore_whitespace bool
+	title_page_align  uint8
 
-	line_height float64
-
+	line_height       float64
 	margin_left       float64
 	margin_right      float64
 	margin_top        float64
@@ -90,9 +87,9 @@ type Template_Entry struct {
 	style   Leaf_Type // force style override (bitwise)
 	casing  uint8     // force upper/lower case
 	justify uint8     // align to left or right margin
-	margin  float64   // bump up left or right margin
 
 	// 0 = ignored
+	margin       float64 // bump up left or right margin
 	width        float64 // max width of wrap in units
 	space_above  float64 // add extra padding above
 	line_height  float64 // internal wrapping override
@@ -104,15 +101,15 @@ func set_paper(text string) (lib.Rect, bool) {
 	switch homogenise(text) {
 	case "a4":
 		return *lib.PageSizeA4, true
-	case "usletter", "letter":
-		return *lib.PageSizeLetter, true
 	case "uslegal", "legal":
 		return *lib.PageSizeLegal, true
+	case "usletter", "letter":
+		return *lib.PageSizeLetter, true
 	}
 	return *lib.PageSizeLetter, false
 }
 
-func is_valid_format(text string) (Format, bool) {
+func set_format(text string) (Format, bool) {
 	switch homogenise(text) {
 	case "film", "screen", "screenplay":
 		return SCREENPLAY, true
@@ -142,12 +139,14 @@ func build_template(config *Config, format Format) *Template {
 	output.margin_top    = MARGIN_TOP
 	output.margin_bottom = MARGIN_BOTTOM
 
+	output.paper = config.paper_size
+
 	switch format {
 	default:
-		default_screenplay(output, config.paper_size)
+		default_screenplay(output)
 
 	case STAGEPLAY:
-		default_screenplay(output, config.paper_size)
+		default_screenplay(output)
 
 		output.types[ACTION]        .width  = INCH * 3.2
 		output.types[ACTION]        .margin = INCH * 2.5
@@ -157,7 +156,7 @@ func build_template(config *Config, format Format) *Template {
 		output.types[LYRIC]         .width  = INCH * 4.5
 
 	case GRAPHIC_NOVEL:
-		default_screenplay(output, config.paper_size)
+		default_screenplay(output)
 
 		output.types[SECTION]  .skip = false
 		output.types[SECTION2] .skip = false
@@ -271,7 +270,7 @@ func build_template(config *Config, format Format) *Template {
 		config.paper_size.W, config.paper_size.H = config.paper_size.H, config.paper_size.W
 		output.margin_right = config.paper_size.W - MARGIN_RIGHT
 
-		default_screenplay(output, config.paper_size)
+		default_screenplay(output)
 
 		output.types[ACTION].width              = INCH * 3.5
 		output.types[CHARACTER].margin          = INCH
@@ -342,7 +341,7 @@ func build_template(config *Config, format Format) *Template {
 // the base screenplay template is re-used / built on by
 // several of the other templates, so it's here in a
 // reusable form
-func default_screenplay(output *Template, paper lib.Rect) {
+func default_screenplay(output *Template) {
 	output.kind             = SCREENPLAY
 	output.line_height      = PICA
 	output.title_page_align = CENTER
@@ -367,8 +366,9 @@ func default_screenplay(output *Template, paper lib.Rect) {
 
 	output.types[DIALOGUE].margin = INCH
 	output.types[DIALOGUE].width  = INCH * 3
+	output.types[DIALOGUE].trail_height = output.line_height
 
-	output.types[DUAL_DIALOGUE].width = (output.margin_right - output.margin_left) / 2 - PICA * 2
+	output.types[DUAL_DIALOGUE].width = (output.paper.W - output.margin_right - output.margin_left) / 2 - PICA * 2
 
 	output.types[LYRIC].margin = INCH
 	output.types[LYRIC].width  = INCH * 3
@@ -402,7 +402,7 @@ func default_screenplay(output *Template, paper lib.Rect) {
 	output.types[SECTION3].style        = BOLD
 	output.types[SECTION3].trail_height = PICA * 2
 
-	output.dual_right_offset = paper.W - output.margin_right - output.types[DUAL_DIALOGUE].width - output.margin_left - PICA
+	output.dual_right_offset = output.paper.W - output.margin_right - output.types[DUAL_DIALOGUE].width - output.margin_left - PICA
 }
 
 func template_entry_parser(template *Template, current Line_Type, line string, line_count int) bool {
@@ -539,6 +539,44 @@ func template_entry_parser(template *Template, current Line_Type, line string, l
 	}
 
 	return true
+}
+
+func vet_template(template *Template) {
+	vet_value(template.line_height,       "line_height")
+	vet_value(template.margin_left,       "margin_left")
+	vet_value(template.margin_right,      "margin_right")
+	vet_value(template.margin_top,        "margin_top")
+	vet_value(template.margin_bottom,     "margin_bottom")
+	vet_value(template.center_line,       "center_line")
+	vet_value(template.dual_right_offset, "dual_right_offset")
+	vet_value(template.starred_margin,    "starred_margin")
+	vet_value(template.starred_nudge,     "starred_nudge")
+	vet_value(template.header_margin,     "header_margin")
+	vet_value(template.footer_margin,     "footer_margin")
+
+	for item_type, item := range template.types {
+		item_type := Line_Type(item_type)
+		vet_entry_value(item.casing,       item_type, "casing")
+		vet_entry_value(item.justify,      item_type, "justify")
+		vet_entry_value(item.margin,       item_type, "margin")
+		vet_entry_value(item.width,        item_type, "width")
+		vet_entry_value(item.space_above,  item_type, "space_above")
+		vet_entry_value(item.line_height,  item_type, "line_height")
+		vet_entry_value(item.trail_height, item_type, "trail_height")
+		vet_entry_value(item.para_indent,  item_type, "para_indent")
+	}
+}
+
+func vet_value[V uint8 | int | float64](v V, s string) {
+	if v < 0 {
+		eprintf("template: %s is negative value", s)
+	}
+}
+
+func vet_entry_value[V uint8 | int | float64](v V, t Line_Type, s string) {
+	if v < 0 {
+		eprintf("template: %v.%s is negative value", t, s)
+	}
 }
 
 func set_style(line string) (Leaf_Type, bool) {

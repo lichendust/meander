@@ -22,7 +22,8 @@ var ascii_space = [256]uint8{'\t':1,'\n':1,'\v':1,'\f':1,'\r':1,' ':1}
 var running_in_term bool
 
 func init() {
-	running_in_term = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
+	pipe := os.Stdout.Fd()
+	running_in_term = isatty.IsTerminal(pipe) || isatty.IsCygwinTerminal(pipe)
 }
 
 /*func left_trim_x(input string) int {
@@ -158,46 +159,22 @@ func is_all_letters(input string) bool {
 	return true
 }
 
-// github.com/arturwwl/gointtoletters
-func alphabetical_increment(number int) string {
-	number  -= 1
-	letters := ""
-
-	if first_letter := number / 26; first_letter > 0 {
-		letters += alphabetical_increment(first_letter)
-		letters += string('A' + number % 26)
-	} else {
-		letters += string('A' + number)
+func alphabetical_increment(number int, buffer *strings.Builder) string {
+	if buffer == nil {
+		buffer = new(strings.Builder)
+		buffer.Grow(3)
 	}
 
-	return letters
-}
-
-// this is a much nicer implementation what i
-// wrote but it gives a reversed string and
-// i'm too stupid to figure out how to get
-// it to not do that.
-/*func alphabetical_increment(number int) string {
-	buffer := new(strings.Builder)
-	buffer.Grow(3)
-
 	number -= 1
-
-	for {
-		letter := number / 26
-
-		if letter > 0 {
-			buffer.WriteRune(rune('A' + number % 26))
-			number = letter - 1
-			continue
-		}
-
+	if first_letter := number / 26; first_letter > 0 {
+		alphabetical_increment(first_letter, buffer)
+		buffer.WriteRune(rune('A' + number % 26))
+	} else {
 		buffer.WriteRune(rune('A' + number))
-		break
 	}
 
 	return buffer.String()
-}*/
+}
 
 func alphabet_to_int(input string) int {
 	number := 0
@@ -418,8 +395,6 @@ func short_words(t string) bool {
 var get_rune = utf8.DecodeRuneInString
 
 func title_case(input string) string {
-	input = normalise_text(input)
-
 	words := strings.Split(input, " ")
 
 	for i, word := range words {
@@ -573,7 +548,6 @@ const ANSI_RESET = "\033[0m"
 const ANSI_COLOR = "\033[91m"
 
 func apply_color(input string) string {
-
 	buffer := strings.Builder{}
 	buffer.Grow(len(input) + 128)
 

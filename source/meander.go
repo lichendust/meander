@@ -46,15 +46,16 @@ func main() {
 		println(help("credit") + "\n" + LICENSE_TEXT)
 
 	case COMMAND_HELP:
-		println(MEANDER)
-
 		args := os.Args[2:]
+		text := ""
 		if len(args) == 0 {
-			println(apply_color(help("help")))
-			return
+			text = help("help")
+		} else {
+			text = help(args[0])
 		}
 
-		println(apply_color(help(args[0])))
+		println(MEANDER)
+		println(apply_color(text))
 	}
 }
 
@@ -100,8 +101,8 @@ type Config struct {
 	starred_only   bool
 	starred_target string
 
-	source_file  string
-	output_file  string
+	source_file string
+	output_file string
 }
 
 func arg_scene_type(x string) (uint8, bool) {
@@ -251,13 +252,15 @@ func get_arguments() (*Config, bool) {
 				return config, false
 			}
 
+			x, success := set_format(args[index])
+			if !success {
+				eprintln("error: not a valid template")
+				return config, false
+			}
+
+			config.template = x
 			config.template_set = true
 			config.template_string = args[index]
-
-			x, success := is_valid_format(config.template_string)
-			if success {
-				config.template = x
-			}
 			index += 1
 
 		case "paper", "p":

@@ -79,8 +79,6 @@ type Section struct {
 	Revision    string    `json:"revision,omitempty"`
 	Level       int       `json:"level,omitempty"`
 
-	clean_revision string // internal for string matching
-
 	longest_line int
 	lines []Line
 }
@@ -327,7 +325,7 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 
 			case "format", "template":
 				if !config.template_set {
-					x, success := is_valid_format(sub_line)
+					x, success := set_format(sub_line)
 					if success {
 						config.template     = x
 						config.template_set = true

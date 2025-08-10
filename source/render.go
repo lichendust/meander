@@ -43,6 +43,7 @@ func command_render(config *Config) {
 	data := init_data(config)
 
 	syntax_parser(config, data, text)
+	vet_template(data.template)
 	paginate(config, data)
 
 	if config.starred_show && len(data.config.starred_target) == 0 && len(data.Title.Revision) > 0 {
@@ -164,7 +165,7 @@ func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
 		cont := quick_section(data, data.Title.Contact,   LEFT, LINE_HEIGHT, WIDTH)
 		copy := quick_section(data, data.Title.Copyright, LEFT, LINE_HEIGHT, WIDTH)
 
-		start_y = config.paper_size.H - INCH - (note.total_height + copy.total_height + cont.total_height) + LINE_HEIGHT
+		start_y = data.template.paper.H - INCH - (note.total_height + copy.total_height + cont.total_height) + LINE_HEIGHT
 
 		if data.Title.Notes != "" {
 			note.pos_x = start_x
@@ -187,7 +188,7 @@ func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
 		}
 	}
 
-	start_x = config.paper_size.W - INCH
+	start_x = data.template.paper.W - INCH
 
 	// Revision    DraftDate    Info
 	{
@@ -195,7 +196,7 @@ func render_title(config *Config, data *Fountain, doc *lib.GoPdf) {
 		drft := quick_section(data, data.Title.DraftDate, RIGHT, LINE_HEIGHT, WIDTH)
 		info := quick_section(data, data.Title.Info,      RIGHT, LINE_HEIGHT, WIDTH)
 
-		start_y = config.paper_size.H - INCH - (revs.total_height + drft.total_height + info.total_height) + LINE_HEIGHT
+		start_y = data.template.paper.H - INCH - (revs.total_height + drft.total_height + info.total_height) + LINE_HEIGHT
 
 		if data.Title.Revision != "" {
 			revs.pos_x = start_x
@@ -321,7 +322,7 @@ func render_toc(config *Config, data *Fountain, doc *lib.GoPdf) {
 			running_y += LINE_HEIGHT
 		}
 
-		if running_y > config.paper_size.H - data.template.margin_bottom {
+		if running_y > data.template.paper.H - data.template.margin_bottom {
 			doc.AddPage()
 			running_y = data.template.margin_top
 		}
@@ -582,7 +583,7 @@ func draw_board(data *Fountain, doc *lib.GoPdf) {
 	x := MARGIN_LEFT + data.template.types[ACTION].width + INCH / 2
 	y := MARGIN_TOP - PICA * 0.7
 
-	h := (data.config.paper_size.H - MARGIN_TOP - MARGIN_BOTTOM - PICA * 1.5) / 3
+	h := (data.template.paper.H - MARGIN_TOP - MARGIN_BOTTOM - PICA * 1.5) / 3
 	w := h * 2.35
 
 	for i := float64(0); i < 3; i += 1 {
