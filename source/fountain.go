@@ -73,11 +73,11 @@ type Section struct {
 	para_indent  float64 // applies to first line only; added to margin
 	justify      uint8
 
-	Type        Line_Type `json:"type"`
-	Text        string    `json:"text,omitempty"`
-	SceneNumber string    `json:"scene_number,omitempty"`
-	Revision    string    `json:"revision,omitempty"`
-	Level       int       `json:"level,omitempty"`
+	Type        Section_Type `json:"type"`
+	Text        string       `json:"text,omitempty"`
+	SceneNumber string       `json:"scene_number,omitempty"`
+	Revision    string       `json:"revision,omitempty"`
+	Level       int          `json:"level,omitempty"`
 
 	longest_line int
 	lines []Line
@@ -165,9 +165,9 @@ func init_data(config *Config) *Fountain {
 	return data
 }
 
-type Line_Type uint8
+type Section_Type uint8
 const (
-	WHITESPACE Line_Type = iota
+	WHITESPACE Section_Type = iota
 
 	PAGE_BREAK
 
@@ -204,7 +204,7 @@ const (
 	TYPE_NONE
 )
 
-func (x Line_Type) MarshalJSON() ([]byte, error) {
+func (x Section_Type) MarshalJSON() ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	buffer.Grow(32)
 
@@ -669,6 +669,9 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 			} else if is_valid_transition(clean_line) {
 				the_type = TRANSITION
 
+			} else if last_node, success := get_last_section(nodes); success && is_character_train(last_node.Type) {
+				the_type = DIALOGUE
+
 			} else if is_valid_character(clean_line) {
 				the_type = CHARACTER
 
@@ -677,12 +680,11 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 					level += 1
 				}
 
+				// @todo this rule should not have precedence over the DIALOGUE force below
+				// exceptionally short lines of dialogue are mistakenly indented: "I—"
+
 			} else {
-				if last_node, success := get_last_section(nodes); success && is_character_train(last_node.Type) {
-					the_type = DIALOGUE
-				} else {
-					clean_line = dirty_line // plain action uses dirty_line
-				}
+				clean_line = dirty_line // plain action uses dirty_line
 			}
 		}
 
@@ -1116,7 +1118,7 @@ func get_scene_number(text string) (string, string, bool) {
 	return "", "", false
 }
 
-func is_character_train(node_type Line_Type) bool {
+func is_character_train(node_type Section_Type) bool {
 	return node_type > begin_character && node_type < end_character
 }
 
@@ -1200,10 +1202,10 @@ func handle_rev_tags(node *Section) {
 	}
 }
 
-const LINE_TYPE_NAMES = "whitespacepage_breakheaderfooteris_printableactionscenebegin_charactercharacterdual_characterparentheticaldual_parentheticaldialoguedual_dialoguelyricdual_lyricend_charactertransitionsynopsiscenteredis_sectionsectionsection2section3type_count"
+const Section_Type_NAMES = "whitespacepage_breakheaderfooteris_printableactionscenebegin_charactercharacterdual_characterparentheticaldual_parentheticaldialoguedual_dialoguelyricdual_lyricend_charactertransitionsynopsiscenteredis_sectionsectionsection2section3type_count"
 
-var LINE_TYPE_INDICES = [...]uint8{0, 10, 20, 26, 32, 44, 50, 55, 70, 79, 93, 106, 124, 132, 145, 150, 160, 173, 183, 191, 199, 209, 216, 224, 232, 242}
+var Section_Type_INDICES = [...]uint8{0, 10, 20, 26, 32, 44, 50, 55, 70, 79, 93, 106, 124, 132, 145, 150, 160, 173, 183, 191, 199, 209, 216, 224, 232, 242}
 
-func (i Line_Type) String() string {
-	return LINE_TYPE_NAMES[LINE_TYPE_INDICES[i]:LINE_TYPE_INDICES[i+1]]
+func (i Section_Type) String() string {
+	return Section_Type_NAMES[Section_Type_INDICES[i]:Section_Type_INDICES[i+1]]
 }

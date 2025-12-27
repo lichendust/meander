@@ -15,11 +15,13 @@ In Progress
 - Fixed an edge case where punctuation could be orphaned by line-wrapping if the preceding word was a different font-style.
 - Fixed a bug where certain markup characters were still treated as markup (and thus disappeared) when used in ways that should print regular characters.
 - Fixed the final page not including a footer.
+- Fixed an edge case where text colour did not reset to black.
 - Fixed indentation styles being mistakenly applied to the second half of a paragraph after a page-break.
+- Fixed indentation being mistakenly applied to extraordinarily short lines of dialogue or all-caps yelling.
 
 ### Internal
 
-- Rewrote templating constructor to support external templates.
+- Rewrote templating constructor to support templates.
 - Rewrote argument parser to more easily support variable numbers of arguments after a flag.
 - Updated dependencies to latest versions.
 - Updated to latest Go version (no code changes).

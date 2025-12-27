@@ -405,7 +405,7 @@ func default_screenplay(output *Template) {
 	output.dual_right_offset = output.paper.W - output.margin_right - output.types[DUAL_DIALOGUE].width - output.margin_left - PICA
 }
 
-func template_entry_parser(template *Template, current Line_Type, line string, line_count int) bool {
+func template_entry_parser(template *Template, current Section_Type, line string, line_count int) bool {
 	line = strings.ToLower(line)
 	ident, w := extract_ident(line)
 	line = left_trim(line[w:])
@@ -555,7 +555,7 @@ func vet_template(template *Template) {
 	vet_value(template.footer_margin,     "footer_margin")
 
 	for item_type, item := range template.types {
-		item_type := Line_Type(item_type)
+		item_type := Section_Type(item_type)
 		vet_entry_value(item.casing,       item_type, "casing")
 		vet_entry_value(item.justify,      item_type, "justify")
 		vet_entry_value(item.margin,       item_type, "margin")
@@ -573,7 +573,7 @@ func vet_value[V uint8 | int | float64](v V, s string) {
 	}
 }
 
-func vet_entry_value[V uint8 | int | float64](v V, t Line_Type, s string) {
+func vet_entry_value[V uint8 | int | float64](v V, t Section_Type, s string) {
 	if v < 0 {
 		eprintf("template: %v.%s is negative value", t, s)
 	}
@@ -643,7 +643,7 @@ func parse_color(numbers string) (Color, bool) {
 	return c, true
 }
 
-func string_to_section_type(x string) (Line_Type, bool) {
+func string_to_section_type(x string) (Section_Type, bool) {
 	switch strings.ToLower(x) {
 	case "action":
 		return ACTION, true

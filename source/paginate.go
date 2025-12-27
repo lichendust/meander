@@ -36,27 +36,6 @@ func style_override(section *Section, style Leaf_Type) {
 	for an example
 */
 
-func find_header_or_footer(data *Fountain, search_array []Section, search_depth int) {
-	outer: for index, item := range search_array {
-		if index > search_depth {
-			break
-		}
-
-		switch item.Type {
-		case PAGE_BREAK:
-			break outer
-
-		case HEADER:
-			data.header = item.Text
-			break outer
-
-		case FOOTER:
-			data.footer = item.Text
-			break outer
-		}
-	}
-}
-
 // @note some of the inside_dual_dialogue state
 // stuff is a confusing read -- clean up or rework
 func paginate(config *Config, data *Fountain) {
@@ -134,14 +113,14 @@ func paginate(config *Config, data *Fountain) {
 		// stays clean and free of strange section levels
 		// for other commands
 		if section.Type == SECTION {
-			section.Type += Line_Type(section.Level - 1)
+			section.Type += Section_Type(section.Level - 1)
 		}
 
 		t := template.types[section.Type]
 
 		section.skip = t.skip
 
-		if running_height >= max_page_height && inside_dual_dialogue != 1 {
+		if running_height > max_page_height && inside_dual_dialogue != 1 {
 			find_header_or_footer(data, original_content[content_index:], 4)
 			new_page()
 
@@ -188,19 +167,6 @@ func paginate(config *Config, data *Fountain) {
 			section.justify     = t.justify
 			section.lines       = break_section(data, section, t.width, t.para_indent, t.style != NORMAL)
 
-			if t.trail_height > 0 && running_height >= max_page_height - t.trail_height {
-				find_header_or_footer(data, original_content[content_index:], 4)
-				new_page()
-				first_on_page = false
-
-				if inside_dual_dialogue == 2 {
-					delayed_page_number = false
-				}
-			}
-
-			section.pos_y = running_height
-			section.page  = page_number
-
 			switch t.justify {
 			default:
 				section.pos_x = template.margin_left + t.margin
@@ -215,6 +181,19 @@ func paginate(config *Config, data *Fountain) {
 			if t.style != NORMAL {
 				style_override(section, t.style)
 			}
+
+			if t.trail_height > 0 && running_height >= max_page_height - t.trail_height {
+				find_header_or_footer(data, original_content[content_index:], 4)
+				new_page()
+				first_on_page = false
+
+				if inside_dual_dialogue == 2 {
+					delayed_page_number = false
+				}
+			}
+
+			section.pos_y = running_height
+			section.page  = page_number
 
 			if !section.is_raw {
 				page_break_length := 0
@@ -249,7 +228,7 @@ func paginate(config *Config, data *Fountain) {
 					}
 
 					if section.Type == DIALOGUE || section.Type == DUAL_DIALOGUE {
-						dual_offset := Line_Type(0)
+						dual_offset := Section_Type(0)
 						if section.Type == DUAL_DIALOGUE {
 							dual_offset = 1
 						}
@@ -361,7 +340,7 @@ func paginate(config *Config, data *Fountain) {
 	sort.Stable(Page_Sorter(data.Content))
 }
 
-func do_header(data *Fountain, text string, the_type Line_Type, page_number int) {
+func do_header(data *Fountain, text string, the_type Section_Type, page_number int) {
 	if text == "" {
 		return
 	}
@@ -961,3 +940,48 @@ func inline_balance(entry *Inline_Format, check bool) bool {
 	}
 	return check
 }
+
+func find_header_or_footer(data *Fountain, search_array []Section, search_depth int) {
+	if len(search_array) > 0 {
+		search_array = search_array[1:]
+	}
+
+	outer: for index, section := range search_array {
+		if index > search_depth {
+			break
+		}
+
+		switch section.Type {
+		case PAGE_BREAK:
+			break outer
+
+		case HEADER:
+			data.header = section.Text
+			break outer
+
+		case FOOTER:
+			data.footer = section.Text
+			break outer
+		}
+	}
+}
+
+/*func is_next_non_whitespace(search_array []Section, tt Section_Type) bool {
+	if len(search_array) > 0 {
+		search_array = search_array[1:]
+	}
+
+	outer: for _, item := range search_array {
+		switch item.Type {
+		case tt:
+			return true
+
+		case WHITESPACE:
+			continue outer
+
+		default:
+			break outer
+		}
+	}
+	return false
+}*/

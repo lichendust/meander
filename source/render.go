@@ -302,6 +302,7 @@ func render_toc(config *Config, data *Fountain, doc *lib.GoPdf) {
 			new_section.pos_y = running_y
 
 			if section.Type == SCENE {
+				set_color(doc, data.template.text_color)
 				doc.SetXY(running_x, running_y)
 				doc.Text(section.SceneNumber)
 				new_section.pos_x += scene_inset
@@ -359,12 +360,14 @@ func render_content(config *Config, data *Fountain, doc *lib.GoPdf) {
 
 			set_font(doc, NO_TYPE)
 
+			set_color(doc, data.template.text_color)
 			doc.SetY(section.pos_y)
 			doc.SetX(left_x)
 			doc.Text(section.SceneNumber)
 
 			draw_section(doc, data, section)
 
+			set_color(doc, data.template.text_color)
 			doc.SetX(right_x)
 			doc.Text(section.SceneNumber)
 			continue
