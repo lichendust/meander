@@ -25,17 +25,6 @@ func style_override(section *Section, style Leaf_Type) {
 	}
 }
 
-/*
-	@bug in the inline parser: markdown characters with
-	nothing before or after should be treated as regular text,
-	but right now some of them become blank styling
-	try
-
-		> * * * <
-
-	for an example
-*/
-
 // @note some of the inside_dual_dialogue state
 // stuff is a confusing read -- clean up or rework
 func paginate(config *Config, data *Fountain) {
@@ -916,6 +905,10 @@ func break_section(data *Fountain, section *Section, width float64, para_indent 
 }
 
 func inline_balance(entry *Inline_Format, check bool) bool {
+	if entry.leaf_type < is_balanced {
+		return check
+	}
+
 	if entry.could_open && entry.could_close {
 		if check {
 			return false
@@ -937,7 +930,10 @@ func inline_balance(entry *Inline_Format, check bool) bool {
 		} else {
 			entry.leaf_type = NORMAL
 		}
+	} else {
+		entry.leaf_type = NORMAL
 	}
+
 	return check
 }
 

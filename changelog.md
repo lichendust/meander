@@ -1,14 +1,13 @@
 # Changelog
 
-## 0.3.0
+## 0.2.6
 
-In Progress
+Minor Release
 
 ### Features
 
 - Added starred revisions and an accompanying syntax: `@pink`.
 - Added user-editable templating.
-- Added plain-text archival mode.
 
 ### Bugs
 
@@ -21,10 +20,11 @@ In Progress
 
 ### Internal
 
-- Rewrote templating constructor to support templates.
+- Rewrote templating constructor to support user configuration.
 - Rewrote argument parser to more easily support variable numbers of arguments after a flag.
 - Updated dependencies to latest versions.
 - Updated to latest Go version (no code changes).
+- Better help text and command warnings.
 
 ## 0.2.3
 

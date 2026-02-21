@@ -23,44 +23,6 @@ package main
 
 func help(arg string) string {
 	switch arg {
-		case "help":
-			return `
-$1Usage$0
------
-
-    meander [command] input.fountain [output.pdf] [--flags]
-
-Meander is designed to run as sensibly as possible with as few 
-options as possible:
-
-    + If no command is supplied, Meander will
-      render a PDF
-    + If no output is supplied, Meander will swap
-      the extension to an appropriate one for the
-      chosen command.
-
-$1Commands$0
---------
-
-    $1render$0    render input file to PDF (default)
-    $1gender$0    display gender analysis statistics
-    $1merge$0     merge a multi-file document
-    $1data$0      create a machine-readable document
-    $1convert$0   (experimental) convert from other software
-    $1help$0      print this message and others
-    $1version$0   print the current version
-    $1credit$0    print the credit and legal text
-    $1fonts$0     export a copy of the bundled fonts
-
-$1Help$0
-----
-
-Use $1meander help [command]$0 for more information on the 
-above commands, but also see the additional help topics 
-available below:
-
-    $1fountain$0  fountain cheat sheet
-`
 		case "convert":
 			return `
 $1Convert Usage$0
@@ -74,7 +36,7 @@ Converts a Final Draft XML file to Fountain.
 `
 		case "credit":
 			return `
-Copyright (C) 2022-2023 Harley Denham
+Copyright (C) 2022-2026 Harley Denham
 
 This program comes with ABSOLUTELY NO WARRANTY. This is free 
 software, and you are welcome to redistribute it under certain 
@@ -793,8 +755,46 @@ $1Force Hidden Syntaxes$0
 $1Starred Revision Markers$0
 ------------------------
 
-    $1--stars$0
-    $1--stars-only$0
+    $1--revision$0
+    $1--revision-only$0
+`
+		case "help":
+			return `
+$1Usage$0
+-----
+
+    meander [command] input.fountain [output.pdf] [--flags]
+
+Meander is designed to run as sensibly as possible with as few 
+options as possible:
+
+    + If no command is supplied, Meander will
+      render a PDF
+    + If no output is supplied, Meander will swap
+      the extension to an appropriate one for the
+      chosen command.
+
+$1Commands$0
+--------
+
+    $1render$0    render input file to PDF (default)
+    $1gender$0    display gender analysis statistics
+    $1merge$0     merge a multi-file document
+    $1data$0      create a machine-readable document
+    $1convert$0   (experimental) convert from other software
+    $1help$0      print this message and others
+    $1version$0   print the current version
+    $1credit$0    print the credit and legal text
+    $1fonts$0     export a copy of the bundled fonts
+
+$1Help$0
+----
+
+Use $1meander help [command]$0 for more information on the 
+above commands, but also see the additional help topics 
+available below:
+
+    $1fountain$0  fountain cheat sheet
 `
 	}
 	return ""

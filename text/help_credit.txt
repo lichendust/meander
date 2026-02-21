@@ -1,4 +1,4 @@
-Copyright (C) 2022-2023 Harley Denham
+Copyright (C) 2022-2026 Harley Denham
 
 This program comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it under certain conditions.
 

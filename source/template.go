@@ -70,9 +70,8 @@ type Template struct {
 
 	starred_margin float64
 	starred_nudge  float64 // tiny offset for the height of starred rev asterisks
-
-	header_margin float64
-	footer_margin float64
+	header_margin  float64
+	footer_margin  float64
 
 	text_color      Color
 	note_color      Color
@@ -164,12 +163,10 @@ func build_template(config *Config, format Format) *Template {
 
 	case MANUSCRIPT:
 		output.title_page_align  = CENTER
-		output.line_height       = PICA
-		output.margin_left       = INCH
+		output.line_height       = PICA * 2
 		output.ignore_whitespace = true
 
 		output.types[ACTION].para_indent = 4
-		output.types[ACTION].line_height = PICA * 2
 
 		output.types[SCENE].casing      = UPPERCASE
 		output.types[SCENE].space_above = PICA
@@ -178,8 +175,8 @@ func build_template(config *Config, format Format) *Template {
 		output.types[TRANSITION].casing  = UPPERCASE
 		output.types[TRANSITION].justify = RIGHT
 
-		output.types[CENTERED].justify = CENTER
-		output.types[CENTERED].width   = INCH * 5
+		output.types[CENTERED].justify     = CENTER
+		output.types[CENTERED].width       = INCH * 5
 
 		output.types[SYNOPSIS].skip  = true
 		output.types[SYNOPSIS].style = ITALIC
@@ -202,9 +199,9 @@ func build_template(config *Config, format Format) *Template {
 	case MANUSCRIPT_COMPACT:
 		output.title_page_align = CENTER
 		output.line_height      = PICA
+		output.center_line      = INCH * 3.2
 
 		output.types[ACTION].para_indent = 4
-		output.types[ACTION].line_height = PICA
 		output.types[ACTION].width       = INCH * 3.5
 
 		output.types[SCENE].casing      = UPPERCASE
@@ -272,22 +269,22 @@ func build_template(config *Config, format Format) *Template {
 
 		default_screenplay(output)
 
-		output.types[ACTION].width              = INCH * 3.5
-		output.types[CHARACTER].margin          = INCH
-		output.types[DUAL_CHARACTER].margin     = INCH / 2
-		output.types[PARENTHETICAL].margin      = INCH * 0.4
-		output.types[DUAL_PARENTHETICAL].margin = INCH * 1.4
-		output.types[DUAL_PARENTHETICAL].width  = INCH * 2
-		output.types[DIALOGUE].margin           = 0
-		output.types[DIALOGUE].margin           = INCH * 2.5
-		output.types[DUAL_DIALOGUE].margin      = 0
-		output.types[DUAL_DIALOGUE].width       = INCH * 1.5
-		output.types[LYRIC].margin              = 0
-		output.types[TRANSITION].margin         = INCH * 5.5
+		output.types[ACTION]             .width  = INCH * 3.5
+		output.types[CHARACTER]          .margin = INCH
+		output.types[DUAL_CHARACTER]     .margin = INCH / 2
+		output.types[PARENTHETICAL]      .margin = INCH * 0.4
+		output.types[DUAL_PARENTHETICAL] .margin = INCH * 1.4
+		output.types[DUAL_PARENTHETICAL] .width  = INCH * 2
+		output.types[DIALOGUE]           .margin = 0
+		output.types[DIALOGUE]           .margin = INCH * 2.5
+		output.types[DUAL_DIALOGUE]      .margin = 0
+		output.types[DUAL_DIALOGUE]      .width  = INCH * 1.5
+		output.types[LYRIC]              .margin = 0
+		output.types[TRANSITION]         .margin = INCH * 5.5
 	}
 
 	// @todo bottom margin should reflect this pre-compute standard?
-	output.margin_right  = config.paper_size.W - MARGIN_RIGHT
+	output.margin_right = config.paper_size.W - MARGIN_RIGHT
 
 	if output.header_margin == 0 {
 		output.header_margin = PICA * 3

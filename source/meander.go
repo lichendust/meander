@@ -10,7 +10,7 @@ import "os"
 
 import lib "github.com/signintech/gopdf"
 
-const VERSION = "v0.3.0"
+const VERSION = "v0.2.6"
 const MEANDER = "Meander " + VERSION
 
 func main() {
@@ -119,6 +119,7 @@ func arg_scene_type(x string) (uint8, bool) {
 
 func get_arguments() (*Config, bool) {
 	const SEE_HELP_RENDER = "see $1meander help render$0 for full usage"
+	const SEE_HELP        = "see $1meander help$0 for full usage"
 
 	args := os.Args[1:]
 
@@ -200,6 +201,10 @@ func get_arguments() (*Config, bool) {
 		}
 
 		switch arg {
+		case "h", "help":
+			config.command = COMMAND_HELP
+			return config, true
+
 		case "toc":
 			config.table_of_contents = true
 
@@ -215,11 +220,11 @@ func get_arguments() (*Config, bool) {
 		case "print-gender", "g":
 			config.include_gender = true
 
-		case "stars-only":
+		case "revision-only":
 			config.starred_only = true
 			fallthrough
 
-		case "stars":
+		case "revision", "r":
 			config.starred_show = true
 
 			if index > max {
@@ -285,7 +290,7 @@ func get_arguments() (*Config, bool) {
 	}
 
 	if config.source_file == "" {
-		eprintln("error: no input file specified!")
+		eprintln(apply_color("error: no input file specified!\n" + SEE_HELP))
 		return config, false
 	}
 

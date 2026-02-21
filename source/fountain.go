@@ -357,11 +357,10 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 		copy := new(strings.Builder)
 		copy.Grow(len(text))
 
-		eat_spaces    := false
-		eat_newlines  := false
-		last_rune     := '_'
-
-		is_escaped := false
+		eat_spaces   := false
+		eat_newlines := false
+		is_escaped   := false
+		last_rune    := '_'
 
 		for len(text) > 0 {
 			if !config.include_notes {
@@ -776,7 +775,9 @@ func syntax_parser(config *Config, data *Fountain, text string) {
 				node.Type += 1
 				node.Level = level
 			}
-			node.Revision = revision
+			if node.Revision == "" {
+				node.Revision = revision
+			}
 			continue
 		}
 
@@ -1202,10 +1203,9 @@ func handle_rev_tags(node *Section) {
 	}
 }
 
-const Section_Type_NAMES = "whitespacepage_breakheaderfooteris_printableactionscenebegin_charactercharacterdual_characterparentheticaldual_parentheticaldialoguedual_dialoguelyricdual_lyricend_charactertransitionsynopsiscenteredis_sectionsectionsection2section3type_count"
-
-var Section_Type_INDICES = [...]uint8{0, 10, 20, 26, 32, 44, 50, 55, 70, 79, 93, 106, 124, 132, 145, 150, 160, 173, 183, 191, 199, 209, 216, 224, 232, 242}
+const SECTION_TYPE_NAMES = "whitespacepage_breakheaderfooteris_printableactionscenebegin_charactercharacterdual_characterparentheticaldual_parentheticaldialoguedual_dialoguelyricdual_lyricend_charactertransitionsynopsiscenteredis_sectionsectionsection2section3type_count"
+var SECTION_TYPE_INDICES = [...]uint8{0, 10, 20, 26, 32, 44, 50, 55, 70, 79, 93, 106, 124, 132, 145, 150, 160, 173, 183, 191, 199, 209, 216, 224, 232, 242}
 
 func (i Section_Type) String() string {
-	return Section_Type_NAMES[Section_Type_INDICES[i]:Section_Type_INDICES[i+1]]
+	return SECTION_TYPE_NAMES[SECTION_TYPE_INDICES[i]:SECTION_TYPE_INDICES[i+1]]
 }

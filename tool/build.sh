@@ -47,8 +47,8 @@ for f in $build_dir/*; do
 
 	name=meander_${base}_$version
 
-	cp -n license      $f/license.txt
-	cp -n readme.md    $f/readme.txt
+	cp license      $f/license.txt
+	cp readme.md    $f/readme.txt
 
 	pushd $f > /dev/null
 	zip -r "../$name.zip" * > /dev/null

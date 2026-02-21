@@ -47,5 +47,5 @@ $1Force Hidden Syntaxes$0
 $1Starred Revision Markers$0
 ------------------------
 
-    $1--stars$0
-    $1--stars-only$0
+    $1--revision$0
+    $1--revision-only$0
